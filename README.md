@@ -1,3 +1,3 @@
 # ac-library-zig
 
-ac-library-zig is a zig implementation of AtCoder Library (ACL).
+ac-library-zig is a Zig implementation of AtCoder Library (ACL).
