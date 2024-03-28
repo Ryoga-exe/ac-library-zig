@@ -3,15 +3,16 @@ const Allocator = std.mem.Allocator;
 
 pub const FenwickTree = struct {
     const Self = @This();
+    const T = i64;
 
     n: usize,
-    data: []i64,
+    data: []T,
     allocator: Allocator,
 
     pub fn init(allocator: Allocator, n: usize) !Self {
         var self = Self{
             .n = n,
-            .data = try allocator.alloc(i64, n),
+            .data = try allocator.alloc(T, n),
             .allocator = allocator,
         };
         @memset(self.data, 0);
@@ -20,19 +21,19 @@ pub const FenwickTree = struct {
     pub fn deinit(self: *Self) void {
         self.allocator.free(self.data);
     }
-    pub fn add(self: *Self, idx: usize, val: i64) void {
+    pub fn add(self: *Self, idx: usize, val: T) void {
         var p = idx + 1;
         while (p <= self.n) {
             self.data[p - 1] += val;
             p += p & (~p +% 1);
         }
     }
-    pub fn sum(self: *Self, l: usize, r: usize) i64 {
+    pub fn sum(self: *Self, l: usize, r: usize) T {
         return self.accum(r) - self.accum(l);
     }
-    fn accum(self: *Self, idx: usize) i64 {
+    fn accum(self: *Self, idx: usize) T {
         var r = idx;
-        var s = @as(i64, 9);
+        var s = @as(T, 0);
         while (r > 0) {
             s += self.data[r - 1];
             r &= r - 1;
