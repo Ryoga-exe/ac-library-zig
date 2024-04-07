@@ -1,7 +1,7 @@
 const std = @import("std");
 const Allocator = std.mem.Allocator;
 
-pub fn FenwickTreeI(comptime T: type, comptime e: T, comptime op: fn (T, T) T) type {
+pub fn FenwickTree(comptime T: type, comptime e: T, comptime op: fn (T, T) T) type {
     return struct {
         const Self = @This();
 
@@ -43,15 +43,26 @@ pub fn FenwickTreeI(comptime T: type, comptime e: T, comptime op: fn (T, T) T) t
     };
 }
 
-pub const FenwickTree = FenwickTreeI(i64, 0, addition);
+pub const FenwickTreeI64 = FenwickTree(i64, 0, operation(i64).addition);
+pub const FenwickTreeI32 = FenwickTree(i32, 0, operation(i32).addition);
 
-fn addition(x: i64, y: i64) i64 {
-    return x + y;
+fn operation(comptime T: type) type {
+    return struct {
+        pub fn addition(x: T, y: T) T {
+            return x + y;
+        }
+        pub fn bitAnd(x: T, y: T) T {
+            return x & y;
+        }
+        pub fn bitXor(x: T, y: T) T {
+            return x ^ y;
+        }
+    };
 }
 
 test "FenwickTree works" {
     const allocator = std.testing.allocator;
-    var bit = try FenwickTree.init(allocator, 5);
+    var bit = try FenwickTreeI64.init(allocator, 5);
     defer bit.deinit();
     // [1, 2, 3, 4, 5]
     for (0..5) |i| {
