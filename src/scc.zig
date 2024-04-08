@@ -7,7 +7,7 @@ pub const SccGraph = struct {
 
     internal: internal.SccGraph,
 
-    pub fn init(allocator: Allocator, n: usize) Self {
+    pub fn init(allocator: Allocator, n: usize) !Self {
         return Self{
             .internal = try internal.SccGraph.init(allocator, n),
         };
@@ -44,7 +44,7 @@ test "SccGraph: Self loop" {
 test "SccGraph: ALPC-G sample" {
     // https://atcoder.jp/contests/practice2/tasks/practice2_g
     const n: usize = 6;
-    const edges = &[_]std.meta.Tuple(.{ usize, usize }){
+    const edges = &[_]std.meta.Tuple(&.{ usize, usize }){
         .{ 1, 4 },
         .{ 5, 2 },
         .{ 3, 0 },

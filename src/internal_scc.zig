@@ -8,20 +8,20 @@ pub const SccGraph = struct {
     edges: []std.ArrayList(usize),
     allocator: Allocator,
 
-    pub fn init(allocator: Allocator, n: usize) Self {
+    pub fn init(allocator: Allocator, n: usize) !Self {
         var self = Self{
             .n = n,
             .edges = try allocator.alloc(std.ArrayList(usize), n),
             .allocator = allocator,
         };
-        for (self.edges) |edge| {
-            edge = try std.ArrayList(usize).init(allocator);
+        for (0..self.n) |i| {
+            self.edges[i] = std.ArrayList(usize).init(allocator);
         }
         return self;
     }
     pub fn deinit(self: *Self) void {
-        for (self.edges) |edge| {
-            edge.deinit();
+        for (0..self.n) |i| {
+            self.edges[i].deinit();
         }
         self.allocator.free(self.edges);
     }
