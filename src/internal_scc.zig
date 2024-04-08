@@ -20,8 +20,8 @@ pub const SccGraph = struct {
         return self;
     }
     pub fn deinit(self: *Self) void {
-        for (0..self.n) |i| {
-            self.edges[i].deinit();
+        for (self.edges) |*edge| {
+            edge.deinit();
         }
         self.allocator.free(self.edges);
     }
