@@ -56,6 +56,7 @@ pub const SccGraph = struct {
         @memset(env.ids, 0);
 
         defer {
+            env.g.deinit();
             env.visited.deinit();
             self.allocator.free(env.low);
             self.allocator.free(env.ord);

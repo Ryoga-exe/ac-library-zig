@@ -34,6 +34,7 @@ pub fn Csr(comptime E: type) type {
         }
         pub fn deinit(self: *Self) void {
             self.allocator.free(self.start);
+            self.allocator.free(self.elist);
         }
     };
 }
