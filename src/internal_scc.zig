@@ -42,10 +42,10 @@ pub const SccGraph = struct {
     }
     pub fn sccIds(self: Self) !std.meta.Tuple(&.{ usize, []usize }) {
         var env = Env{
-            .g = Csr(Edge).init(self.allocator, self.n, self.edges, Edge{ .to = 0 }),
+            .g = try Csr(Edge).init(self.allocator, self.n, self.edges, Edge{ .to = 0 }),
             .now_ord = 0,
             .group_num = 0,
-            .visited = std.ArrayList(usize).initCapacity(self.allocator, self.n),
+            .visited = try std.ArrayList(usize).initCapacity(self.allocator, self.n),
             .low = try self.allocator.alloc(usize, self.n),
             .ord = try self.allocator.alloc(?usize, self.n),
             .ids = try self.allocator.alloc(usize, self.n),
@@ -64,20 +64,20 @@ pub const SccGraph = struct {
 
         for (0..self.n) |i| {
             if (env.ord[i] == null) {
-                try self.dfs(i, self.n, &env);
+                try dfs(i, self.n, &env);
             }
         }
         for (0..self.n) |i| {
             env.ids[i] = env.group_num - 1 - env.ids[i];
         }
-        return .{ env.group_num, self.allocator.dupe(usize, env.ids) };
+        return .{ env.group_num, try self.allocator.dupe(usize, env.ids) };
     }
     pub fn scc(self: Self) !Groups {
-        const ids = self.sccIds();
+        const ids = try self.sccIds();
         defer self.allocator.free(ids.@"1");
         const group_num = ids.@"0";
 
-        var group_index = self.allocator.alloc(?usize, self.n);
+        var group_index = try self.allocator.alloc(?usize, self.n);
         defer self.allocator.free(group_index);
         @memset(group_index, 0);
         for (0..self.n) |i| {
@@ -96,14 +96,13 @@ pub const SccGraph = struct {
             if (env.ord[to]) |ord| {
                 env.low[v] = @min(env.low[v], ord);
             } else {
-                dfs(to, n, &env);
+                try dfs(to, n, env);
                 env.low[v] = @min(env.low[v], env.low[to]);
             }
         }
         if (env.low[v] == env.ord[v].?) {
             while (true) {
-                const u = env.visited.getLast();
-                env.visited.pop();
+                const u = env.visited.pop();
                 env.ord[u] = n;
                 env.ids[u] = env.group_num;
                 if (u == v) {

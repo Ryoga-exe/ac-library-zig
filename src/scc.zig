@@ -30,8 +30,9 @@ test "SccGraph: Simple graph" {
     defer graph.deinit();
     try graph.addEdge(0, 1);
     try graph.addEdge(1, 0);
-    // const scc = graph.scc();
-    // try std.testing.expect();
+    var scc = try graph.scc();
+    defer scc.deinit();
+    try std.testing.expect(scc.len == 1);
 }
 
 test "SccGraph: Self loop" {
