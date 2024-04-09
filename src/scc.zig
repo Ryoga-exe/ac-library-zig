@@ -1,5 +1,6 @@
 const std = @import("std");
 const internal = @import("internal_scc.zig");
+const Groups = @import("internal_groups.zig").Groups;
 const Allocator = std.mem.Allocator;
 
 pub const SccGraph = struct {
@@ -17,6 +18,9 @@ pub const SccGraph = struct {
     }
     pub fn addEdge(self: *Self, from: usize, to: usize) !void {
         try self.internal.addEdge(from, to);
+    }
+    pub fn scc(self: Self) !Groups {
+        return self.internal.scc();
     }
 };
 
