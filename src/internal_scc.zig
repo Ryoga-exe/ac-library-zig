@@ -19,13 +19,13 @@ pub const SccGraph = struct {
     };
 
     n: usize,
-    edges: std.ArrayList(std.meta.Tuple(.{ usize, Edge })),
+    edges: std.ArrayList(std.meta.Tuple(&.{ usize, Edge })),
     allocator: Allocator,
 
     pub fn init(allocator: Allocator, n: usize) Self {
         var self = Self{
             .n = n,
-            .edges = std.ArrayList(std.meta.Tuple(.{ usize, Edge })).init(allocator),
+            .edges = std.ArrayList(std.meta.Tuple(&.{ usize, Edge })).init(allocator),
             .allocator = allocator,
         };
         return self;
@@ -70,6 +70,11 @@ pub const SccGraph = struct {
             env.ids[i] = env.group_num - 1 - env.ids[i];
         }
         return .{ env.group_num, self.allocator.dupe(usize, env.ids) };
+    }
+    pub fn scc(self: Self) void {
+        const ids = self.sccIds();
+        const group_num = ids.@"0";
+        _ = group_num;
     }
     fn dfs(v: usize, n: usize, env: *Env) !void {
         env.low[v] = env.now_ord;

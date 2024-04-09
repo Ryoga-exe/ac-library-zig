@@ -9,7 +9,7 @@ pub const SccGraph = struct {
 
     pub fn init(allocator: Allocator, n: usize) !Self {
         return Self{
-            .internal = try internal.SccGraph.init(allocator, n),
+            .internal = internal.SccGraph.init(allocator, n),
         };
     }
     pub fn deinit(self: *Self) void {
