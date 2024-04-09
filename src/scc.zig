@@ -42,8 +42,9 @@ test "SccGraph: Self loop" {
     try graph.addEdge(0, 0);
     try graph.addEdge(0, 0);
     try graph.addEdge(1, 1);
-    // const scc = graph.scc();
-    // try std.testing.expect();
+    var scc = try graph.scc();
+    defer scc.deinit();
+    try std.testing.expect(scc.len == 2);
 }
 
 test "SccGraph: ALPC-G sample" {
@@ -65,6 +66,11 @@ test "SccGraph: ALPC-G sample" {
     for (edges) |edge| {
         try graph.addEdge(edge.@"0", edge.@"1");
     }
-    // const scc = graph.scc();
-    // try std.testing.expect();
+    var scc = try graph.scc();
+    defer scc.deinit();
+    try std.testing.expect(scc.len == 4);
+    try std.testing.expectEqualSlices(usize, &[_]usize{5}, scc.get(0));
+    try std.testing.expectEqualSlices(usize, &[_]usize{ 1, 4 }, scc.get(1));
+    try std.testing.expectEqualSlices(usize, &[_]usize{2}, scc.get(2));
+    try std.testing.expectEqualSlices(usize, &[_]usize{ 0, 3 }, scc.get(3));
 }
