@@ -9,13 +9,14 @@ pub fn Csr(comptime E: type) type {
         elist: []E,
         allocator: Allocator,
 
-        pub fn init(allocator: Allocator, n: usize, edges: []const std.meta.Tuple(&.{ usize, E })) !Self {
+        pub fn init(allocator: Allocator, n: usize, edges: []const std.meta.Tuple(&.{ usize, E }), initialValue: E) !Self {
             const self = Self{
                 .start = try allocator.alloc(usize, n + 1),
                 .elist = try allocator.alloc(E, edges.len),
                 .allocator = allocator,
             };
             @memset(self.start, 0);
+            @memset(self.elist, initialValue);
             for (edges) |e| {
                 self.start[e.@"0" + 1] += 1;
             }
