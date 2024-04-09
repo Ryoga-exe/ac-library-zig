@@ -44,7 +44,7 @@ pub const SccGraph = struct {
             .g = Csr(Edge).init(self.allocator, self.n, self.edges, Edge{ .to = 0 }),
             .now_ord = 0,
             .group_num = 0,
-            .visited = std.ArrayList(usize).init(self.allocator),
+            .visited = std.ArrayList(usize).initCapacity(self.allocator, self.n),
             .low = try self.allocator.alloc(usize, self.n),
             .ord = try self.allocator.alloc(?usize, self.n),
             .ids = try self.allocator.alloc(usize, self.n),
@@ -73,6 +73,7 @@ pub const SccGraph = struct {
     }
     pub fn scc(self: Self) void {
         const ids = self.sccIds();
+        defer self.allocator.free(ids.@"1");
         const group_num = ids.@"0";
         _ = group_num;
     }
