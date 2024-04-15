@@ -19,9 +19,32 @@ pub fn Segtree(comptime S: type, op: fn (S, S) S, e: fn () S) type {
                 .n = n,
                 .size = size,
                 .log = log,
-                .d = try allocator.alloc(S, n),
+                .d = try allocator.alloc(S, 2 * size),
                 .allocator = allocator,
             };
+            @memset(self.d, e());
+            return self;
+        }
+        pub fn initFromSlice(allocator: Allocator, v: []const S) !Self {
+            const n = v.len;
+            const size = internal.bitCeil(n);
+            const log = @ctz(size);
+            var self = Self{
+                .n = n,
+                .size = size,
+                .log = log,
+                .d = try allocator.alloc(S, 2 * size),
+                .allocator = allocator,
+            };
+            @memset(self.d, e());
+            for (0..n) |i| {
+                self.d[size + i] = v[i];
+            }
+            var i: usize = size - 1;
+            while (i >= 1) {
+                self.update(i);
+                i -= 1;
+            }
             return self;
         }
         pub fn deinit(self: *Self) void {
