@@ -67,9 +67,33 @@ pub fn Segtree(comptime S: type, op: fn (S, S) S, e: fn () S) type {
         }
         pub fn maxRight(self: *Self, l: usize, f: fn (S) bool) usize {
             // TODO: not implemented yet
-            _ = self;
-            _ = l;
-            _ = f;
+            if (l == self.n) {
+                return self.n;
+            }
+            l += self.size;
+            var sm = e();
+            while (true) {
+                while (l % 2 == 0) {
+                    l >>= 1;
+                }
+                if (!f(op(sm, self.d[l]))) {
+                    while (l < self.size) {
+                        l *= 2;
+                        const res = op(sm, self.d[l]);
+                        if (f(res)) {
+                            sm = res;
+                            l += 1;
+                        }
+                    }
+                    return l - self.size;
+                }
+                sm = op(sm, self.d[l]);
+                l += 1;
+                // (l & -l) == l
+                if ((l % (~l +% 1)) == l) {
+                    break;
+                }
+            }
         }
         pub fn minLeft(self: *Self, r: usize, f: fn (S) bool) usize {
             // TODO: not implemented yet
