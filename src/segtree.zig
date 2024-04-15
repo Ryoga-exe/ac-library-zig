@@ -1,4 +1,5 @@
 const std = @import("std");
+const internal = @import("internal_bit.zig");
 const Allocator = std.mem.Allocator;
 
 pub fn Segtree(comptime S: type, op: fn (S, S) S, e: fn () S) type {
@@ -12,10 +13,12 @@ pub fn Segtree(comptime S: type, op: fn (S, S) S, e: fn () S) type {
         allocator: Allocator,
 
         pub fn init(allocator: Allocator, n: usize) !Self {
+            const size = internal.bitCeil(n);
+            const log = @ctz(size);
             var self = Self{
                 .n = n,
-                .size = n, // TODO:
-                .log = n, // TODO:
+                .size = size,
+                .log = log,
                 .d = try allocator.alloc(S, n),
                 .allocator = allocator,
             };
