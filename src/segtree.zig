@@ -66,7 +66,6 @@ pub fn Segtree(comptime S: type, op: fn (S, S) S, e: fn () S) type {
             return self.d[1];
         }
         pub fn maxRight(self: *Self, l: usize, f: fn (S) bool) usize {
-            // TODO: not implemented yet
             if (l == self.n) {
                 return self.n;
             }
@@ -94,12 +93,37 @@ pub fn Segtree(comptime S: type, op: fn (S, S) S, e: fn () S) type {
                     break;
                 }
             }
+            return self.n;
         }
         pub fn minLeft(self: *Self, r: usize, f: fn (S) bool) usize {
-            // TODO: not implemented yet
-            _ = self;
-            _ = r;
-            _ = f;
+            if (r == 0) {
+                return 0;
+            }
+            r += self.size;
+            var sm = e();
+            while (true) {
+                r -= 1;
+                while (r > 1 and r % 2 == 1) {
+                    r >>= 1;
+                }
+                if (f(op(self.d[r], sm))) {
+                    while (r < self.size) {
+                        r = 2 * r + 1;
+                        const res = op(self.d[r], sm);
+                        if (f(res)) {
+                            sm = res;
+                            r -= 1;
+                        }
+                    }
+                    return r + 1 - self.size;
+                }
+                sm = op(self.d[r], sm);
+                // (r & -r) == r
+                if ((r % (~r +% 1)) == r) {
+                    break;
+                }
+            }
+            return 0;
         }
         fn update(self: *Self, k: usize) void {
             self.d[k] = op(self.d[2 * k], self.d[2 * k + 1]);
