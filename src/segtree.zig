@@ -170,7 +170,7 @@ const monoid = struct {
                 return @max(x, y);
             }
             fn e() T {
-                return 0;
+                return std.math.minInt(T);
             }
         };
     }
@@ -181,16 +181,43 @@ const tests = struct {
     fn f(v: usize) bool {
         return v < target;
     }
+    fn checkSegtree(base: []const i32, segtree: anytype) !void {
+        const n = base.len;
+        for (0..n) |i| {
+            try std.testing.expect(segtree.get(i) == base[i]);
+        }
+        for (0..n + 1) |i| {
+            try std.testing.expect(check(base, segtree, 0, i));
+            try std.testing.expect(check(base, segtree, i, n));
+            for (i..n + 1) |j| {
+                try std.testing.expect(check(base, segtree, i, j));
+            }
+        }
+    }
+    fn check(base: []const i32, segtree: anytype, l: usize, r: usize) bool {
+        var expected: i32 = monoid.max(i32).e();
+        for (l..r) |i| {
+            expected = monoid.max(i32).op(expected, base[i]);
+        }
+        return expected == segtree.prod(l, r);
+    }
 };
 
 test "Segtree works" {
     const allocator = std.testing.allocator;
-    const base = &[_]i32{ 3, 1, 4, 1, 5, 9, 2, 6, 5, 3 };
-    const n = base.len;
-    _ = n;
+    var base = [_]i32{ 3, 1, 4, 1, 5, 9, 2, 6, 5, 3 };
 
-    var segtree = try Segtree(i32, monoid.additive(i32).op, monoid.additive(i32).e).initFromSlice(allocator, base);
+    var segtree = try Segtree(i32, monoid.max(i32).op, monoid.max(i32).e).initFromSlice(allocator, &base);
     defer segtree.deinit();
+    try tests.checkSegtree(&base, &segtree);
+
+    segtree.set(6, 5);
+    base[6] = 5;
+    try tests.checkSegtree(&base, &segtree);
+
+    segtree.set(6, 0);
+    base[6] = 0;
+    try tests.checkSegtree(&base, &segtree);
 }
 
 test "Segtree: ALPC-J sample" {
