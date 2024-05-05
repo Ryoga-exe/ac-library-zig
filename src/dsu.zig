@@ -1,6 +1,7 @@
 const std = @import("std");
 const Groups = @import("internal_groups.zig").Groups;
 const Allocator = std.mem.Allocator;
+const assert = std.debug.assert;
 
 pub const Dsu = struct {
     const Self = @This();
@@ -22,6 +23,8 @@ pub const Dsu = struct {
         self.allocator.free(self.parent_or_size);
     }
     pub fn merge(self: *Self, a: usize, b: usize) usize {
+        assert(a < self.n);
+        assert(b < self.n);
         var x = self.leader(a);
         var y = self.leader(b);
         if (x == y) {
@@ -35,9 +38,12 @@ pub const Dsu = struct {
         return x;
     }
     pub fn same(self: *Self, a: usize, b: usize) bool {
+        assert(a < self.n);
+        assert(b < self.n);
         return self.leader(a) == self.leader(b);
     }
     pub fn leader(self: *Self, a: usize) usize {
+        assert(a < self.n);
         if (self.parent_or_size[a] < 0) {
             return a;
         }
@@ -45,6 +51,7 @@ pub const Dsu = struct {
         return @intCast(self.parent_or_size[a]);
     }
     pub fn size(self: *Self, a: usize) usize {
+        assert(a < self.n);
         const x = self.leader(a);
         return @intCast(-self.parent_or_size[x]);
     }
@@ -67,7 +74,7 @@ pub const Dsu = struct {
     }
 };
 
-test "Dsu works" {
+test Dsu {
     const allocator = std.testing.allocator;
     var d = try Dsu.init(allocator, 4);
     defer d.deinit();
