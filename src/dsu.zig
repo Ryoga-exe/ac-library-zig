@@ -82,12 +82,12 @@ test Dsu {
     try std.testing.expect(d.same(0, 1));
     _ = d.merge(1, 2);
     try std.testing.expect(d.same(0, 2));
-    try std.testing.expect(d.size(0) == 3);
+    try std.testing.expectEqual(@as(usize, 3), d.size(0));
     try std.testing.expect(!d.same(0, 3));
 
     var groups = try d.groups();
     defer groups.deinit();
-    try std.testing.expect(groups.len == 2);
+    try std.testing.expectEqual(@as(usize, 2), groups.len);
     try std.testing.expectEqualSlices(usize, &[_]usize{ 0, 1, 2 }, groups.get(0));
     try std.testing.expectEqualSlices(usize, &[_]usize{3}, groups.get(1));
 }
