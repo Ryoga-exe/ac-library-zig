@@ -1,5 +1,6 @@
 const std = @import("std");
 const Allocator = std.mem.Allocator;
+const assert = std.debug.assert;
 
 pub const Groups = struct {
     const Self = @This();
@@ -43,6 +44,7 @@ pub const Groups = struct {
         self.allocator.free(self.offset);
     }
     pub fn get(self: *Self, a: usize) []usize {
+        assert(a < self.len);
         const offset = self.offset[a];
         return self.data[offset .. offset + self.group_size[a]];
     }
