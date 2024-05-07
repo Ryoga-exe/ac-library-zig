@@ -68,6 +68,10 @@ pub fn invMod(x: i64, m: i64) i64 {
 }
 
 test invMod {
+    try std.testing.expectEqual(@as(i64, 1), @mod(invMod(3, 998244353) * 3, 998244353));
+    try std.testing.expectEqual(@as(i64, 1), @mod(invMod(123, 998244353) * 123, 998244353));
+    try std.testing.expectEqual(@as(i64, 1), @mod(invMod(456, 998244353) * 456, 998244353));
+
     try std.testing.expectEqual(@as(i64, 1), @mod(invMod(3, 1_000_000_007) * 3, 1_000_000_007));
     try std.testing.expectEqual(@as(i64, 1), @mod(invMod(123, 1_000_000_007) * 123, 1_000_000_007));
     try std.testing.expectEqual(@as(i64, 1), @mod(invMod(456, 1_000_000_007) * 456, 1_000_000_007));
