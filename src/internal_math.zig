@@ -28,8 +28,8 @@ pub const Barrett = struct {
         // ((ab * im) >> 64) == c or c + 1
         var z = @as(u64, a);
         z *= @as(u64, b);
-        const x: u64 = @intCast(((@as(u128, z) * @as(u128, self.im)) >> 64));
-        var v: u32 = @intCast(z -% (x *% @as(u64, self.m)));
+        const x: u64 = @truncate(((@as(u128, z) * @as(u128, self.im)) >> 64));
+        var v: u32 = @truncate(z -% (x *% @as(u64, self.m)));
         if (self.m <= v) {
             v +%= self.m;
         }
