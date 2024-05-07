@@ -1,6 +1,7 @@
 const std = @import("std");
 const internal = @import("internal_bit.zig");
 const Allocator = std.mem.Allocator;
+const assert = std.debug.assert;
 
 pub fn Segtree(comptime S: type, comptime op: fn (S, S) S, comptime e: fn () S) type {
     return struct {
@@ -50,6 +51,7 @@ pub fn Segtree(comptime S: type, comptime op: fn (S, S) S, comptime e: fn () S) 
             self.allocator.free(self.d);
         }
         pub fn set(self: *Self, pos: usize, x: S) void {
+            assert(pos < self.n);
             const p = pos + self.size;
             self.d[p] = x;
             for (1..self.log + 1) |i| {
@@ -57,12 +59,15 @@ pub fn Segtree(comptime S: type, comptime op: fn (S, S) S, comptime e: fn () S) 
             }
         }
         pub fn get(self: *Self, p: usize) S {
+            assert(p < self.n);
             return self.d[p + self.size];
         }
         pub fn getSlice(self: *Self) []S {
             return self.d[self.size .. self.size + self.n];
         }
         pub fn prod(self: *Self, left: usize, right: usize) S {
+            assert(left <= right and right <= self.n);
+
             var sml = e();
             var smr = e();
 
@@ -88,6 +93,9 @@ pub fn Segtree(comptime S: type, comptime op: fn (S, S) S, comptime e: fn () S) 
             return self.d[1];
         }
         pub fn maxRight(self: *Self, left: usize, comptime f: fn (S) bool) usize {
+            assert(left <= self.n);
+            assert(f(e()));
+
             if (left == self.n) {
                 return self.n;
             }
@@ -118,6 +126,9 @@ pub fn Segtree(comptime S: type, comptime op: fn (S, S) S, comptime e: fn () S) 
             return self.n;
         }
         pub fn minLeft(self: *Self, right: usize, comptime f: fn (S) bool) usize {
+            assert(right <= self.n);
+            assert(f(e()));
+
             if (right == 0) {
                 return 0;
             }
