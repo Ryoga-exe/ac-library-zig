@@ -1,3 +1,5 @@
+const std = @import("std");
+
 pub const Barrett = struct {
     const Self = @This();
 
@@ -36,3 +38,21 @@ pub const Barrett = struct {
         return v;
     }
 };
+
+test Barrett {
+    var b1 = Barrett.init(7);
+    try std.testing.expectEqual(@as(u32, 7), b1.umod());
+    try std.testing.expectEqual(@as(u32, 6), b1.mul(2, 3));
+    try std.testing.expectEqual(@as(u32, 3), b1.mul(4, 6));
+    try std.testing.expectEqual(@as(u32, 0), b1.mul(5, 0));
+
+    var b2 = Barrett.init(998244353);
+    try std.testing.expectEqual(@as(u33, 998244353), b2.umod());
+    try std.testing.expectEqual(@as(u32, 6), b2.mul(2, 3));
+    try std.testing.expectEqual(@as(u32, 919583920), b2.mul(3141592, 653589));
+    try std.testing.expectEqual(@as(u32, 568012980), b2.mul(323846264, 338327950));
+
+    var b3 = Barrett.init(2147483647);
+    try std.testing.expectEqual(@as(u33, 2147483647), b3.umod());
+    try std.testing.expectEqual(@as(u32, 2147483646), b3.mul(1073741824, 2147483645));
+}
