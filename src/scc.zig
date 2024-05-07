@@ -1,6 +1,6 @@
 const std = @import("std");
 const internal = @import("internal_scc.zig");
-const Groups = @import("internal_groups.zig").Groups;
+const Groups = @import("internal_groups.zig");
 const Allocator = std.mem.Allocator;
 
 pub const SccGraph = struct {

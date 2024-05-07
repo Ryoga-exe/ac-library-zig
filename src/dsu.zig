@@ -1,5 +1,5 @@
 const std = @import("std");
-const Groups = @import("internal_groups.zig").Groups;
+const Groups = @import("internal_groups.zig");
 const Allocator = std.mem.Allocator;
 const assert = std.debug.assert;
 
