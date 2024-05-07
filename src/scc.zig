@@ -3,26 +3,24 @@ const internal = @import("internal_scc.zig");
 const Groups = @import("internal_groups.zig");
 const Allocator = std.mem.Allocator;
 
-pub const SccGraph = struct {
-    const Self = @This();
+const SccGraph = @This();
 
-    internal: internal.SccGraph,
+internal: internal.SccGraph,
 
-    pub fn init(allocator: Allocator, n: usize) !Self {
-        return Self{
-            .internal = internal.SccGraph.init(allocator, n),
-        };
-    }
-    pub fn deinit(self: *Self) void {
-        self.internal.deinit();
-    }
-    pub fn addEdge(self: *Self, from: usize, to: usize) !void {
-        try self.internal.addEdge(from, to);
-    }
-    pub fn scc(self: Self) !Groups {
-        return self.internal.scc();
-    }
-};
+pub fn init(allocator: Allocator, n: usize) !SccGraph {
+    return SccGraph{
+        .internal = internal.SccGraph.init(allocator, n),
+    };
+}
+pub fn deinit(self: *SccGraph) void {
+    self.internal.deinit();
+}
+pub fn addEdge(self: *SccGraph, from: usize, to: usize) !void {
+    try self.internal.addEdge(from, to);
+}
+pub fn scc(self: SccGraph) !Groups {
+    return self.internal.scc();
+}
 
 test "SccGraph: Simple graph" {
     const allocator = std.testing.allocator;
@@ -30,9 +28,9 @@ test "SccGraph: Simple graph" {
     defer graph.deinit();
     try graph.addEdge(0, 1);
     try graph.addEdge(1, 0);
-    var scc = try graph.scc();
-    defer scc.deinit();
-    try std.testing.expect(scc.len == 1);
+    var scc_graph = try graph.scc();
+    defer scc_graph.deinit();
+    try std.testing.expect(scc_graph.len == 1);
 }
 
 test "SccGraph: Self loop" {
@@ -42,9 +40,9 @@ test "SccGraph: Self loop" {
     try graph.addEdge(0, 0);
     try graph.addEdge(0, 0);
     try graph.addEdge(1, 1);
-    var scc = try graph.scc();
-    defer scc.deinit();
-    try std.testing.expect(scc.len == 2);
+    var scc_graph = try graph.scc();
+    defer scc_graph.deinit();
+    try std.testing.expect(scc_graph.len == 2);
 }
 
 test "SccGraph: ALPC-G sample" {
@@ -66,11 +64,11 @@ test "SccGraph: ALPC-G sample" {
     for (edges) |edge| {
         try graph.addEdge(edge.@"0", edge.@"1");
     }
-    var scc = try graph.scc();
-    defer scc.deinit();
-    try std.testing.expect(scc.len == 4);
-    try std.testing.expectEqualSlices(usize, &[_]usize{5}, scc.get(0));
-    try std.testing.expectEqualSlices(usize, &[_]usize{ 1, 4 }, scc.get(1));
-    try std.testing.expectEqualSlices(usize, &[_]usize{2}, scc.get(2));
-    try std.testing.expectEqualSlices(usize, &[_]usize{ 0, 3 }, scc.get(3));
+    var scc_graph = try graph.scc();
+    defer scc_graph.deinit();
+    try std.testing.expect(scc_graph.len == 4);
+    try std.testing.expectEqualSlices(usize, &[_]usize{5}, scc_graph.get(0));
+    try std.testing.expectEqualSlices(usize, &[_]usize{ 1, 4 }, scc_graph.get(1));
+    try std.testing.expectEqualSlices(usize, &[_]usize{2}, scc_graph.get(2));
+    try std.testing.expectEqualSlices(usize, &[_]usize{ 0, 3 }, scc_graph.get(3));
 }
