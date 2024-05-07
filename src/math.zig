@@ -59,3 +59,16 @@ test powMod {
     try std.testing.expectEqual(@as(u32, 78125), powMod(5, 7, 1_000_000_007));
     try std.testing.expectEqual(@as(u32, 565291922), powMod(123, 456, 1_000_000_007));
 }
+
+pub fn invMod(x: i64, m: i64) i64 {
+    assert(1 <= m);
+    const z = internal.invGcd(x, m);
+    assert(z.@"0" == 1);
+    return z.@"1";
+}
+
+test invMod {
+    try std.testing.expectEqual(@as(i64, 1), @mod(invMod(3, 1_000_000_007) * 3, 1_000_000_007));
+    try std.testing.expectEqual(@as(i64, 1), @mod(invMod(123, 1_000_000_007) * 123, 1_000_000_007));
+    try std.testing.expectEqual(@as(i64, 1), @mod(invMod(456, 1_000_000_007) * 456, 1_000_000_007));
+}
