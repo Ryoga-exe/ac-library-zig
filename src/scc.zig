@@ -36,7 +36,7 @@ test "SccGraph: Simple graph" {
     try graph.addEdge(1, 0);
     var scc_graph = try graph.scc();
     defer scc_graph.deinit();
-    try std.testing.expect(scc_graph.len == 1);
+    try std.testing.expectEqual(@as(usize, 1), scc_graph.len);
 }
 
 test "SccGraph: Self loop" {
@@ -48,7 +48,7 @@ test "SccGraph: Self loop" {
     try graph.addEdge(1, 1);
     var scc_graph = try graph.scc();
     defer scc_graph.deinit();
-    try std.testing.expect(scc_graph.len == 2);
+    try std.testing.expectEqual(@as(usize, 2), scc_graph.len);
 }
 
 test "SccGraph: ALPC-G sample" {
@@ -72,7 +72,7 @@ test "SccGraph: ALPC-G sample" {
     }
     var scc_graph = try graph.scc();
     defer scc_graph.deinit();
-    try std.testing.expect(scc_graph.len == 4);
+    try std.testing.expectEqual(@as(usize, 4), scc_graph.len);
     try std.testing.expectEqualSlices(usize, &[_]usize{5}, scc_graph.get(0));
     try std.testing.expectEqualSlices(usize, &[_]usize{ 1, 4 }, scc_graph.get(1));
     try std.testing.expectEqualSlices(usize, &[_]usize{2}, scc_graph.get(2));
