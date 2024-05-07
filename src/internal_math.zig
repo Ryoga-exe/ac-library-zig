@@ -56,3 +56,68 @@ test Barrett {
     try std.testing.expectEqual(@as(u33, 2147483647), b3.umod());
     try std.testing.expectEqual(@as(u32, 2147483646), b3.mul(1073741824, 2147483645));
 }
+
+pub fn invGcd(a: i64, b: i64) struct { i64, i64 } {
+    const c = @mod(a, b);
+    if (c == 0) {
+        return .{ b, 0 };
+    }
+
+    // Contracts:
+    // [1] s - m0 * c = 0 (mod b)
+    // [2] t - m1 * c = 0 (mod b)
+    // [3] s * |m1| + t * |m0| <= b
+    var s = b;
+    var t = c;
+    var m0: i64 = 0;
+    var m1: i64 = 1;
+
+    while (t != 0) {
+        const u = @divFloor(s, t);
+        s -= t * u;
+        m0 -= m1 * u; // |m1 * u| <= |m1| * s <= b
+
+        // [3]:
+        // (s - t * u) * |m1| + t * |m0 - m1 * u|
+        // <= s * |m1| - t * u * |m1| + t * (|m0| + |m1| * u)
+        // = s * |m1| + t * |m0| <= b
+
+        std.mem.swap(i64, &s, &t);
+        std.mem.swap(i64, &m0, &m1);
+    }
+    // by [3]: |m0| <= b/g
+    // by g != b: |m0| < b/g
+    if (m0 < 0) {
+        m0 += @divFloor(b, s);
+    }
+    return .{ s, m0 };
+}
+
+test invGcd {
+    const maxInt = std.math.maxInt;
+    const minInt = std.math.minInt;
+    const query = &[_]struct { a: i64, b: i64, g: i64 }{
+        .{ .a = 0, .b = 1, .g = 1 },
+        .{ .a = 0, .b = 1, .g = 1 },
+        .{ .a = 0, .b = 4, .g = 4 },
+        .{ .a = 0, .b = 7, .g = 7 },
+        .{ .a = 2, .b = 3, .g = 1 },
+        .{ .a = -2, .b = 3, .g = 1 },
+        .{ .a = 4, .b = 6, .g = 2 },
+        .{ .a = -4, .b = 6, .g = 2 },
+        .{ .a = 13, .b = 23, .g = 1 },
+        .{ .a = 57, .b = 81, .g = 3 },
+        .{ .a = 12345, .b = 67890, .g = 15 },
+        .{ .a = -3141592 * 6535, .b = 3141592 * 8979, .g = 3141592 },
+        .{ .a = maxInt(i64), .b = maxInt(i64), .g = maxInt(i64) },
+        .{ .a = minInt(i64), .b = maxInt(i64), .g = 1 },
+    };
+
+    for (query) |q| {
+        const res = invGcd(q.a, q.b);
+        try std.testing.expectEqual(q.g, res.@"0");
+
+        const b = @as(i128, q.b);
+        try std.testing.expectEqual(@mod(@as(i128, q.g), b), @mod(@mod((@as(i128, res.@"1") * @as(i128, q.a)), b) + b, b));
+    }
+}
