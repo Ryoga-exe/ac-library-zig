@@ -2,6 +2,7 @@ const std = @import("std");
 const internal = @import("internal_scc.zig");
 const Groups = @import("internal_groups.zig");
 const Allocator = std.mem.Allocator;
+const assert = std.debug.assert;
 
 const SccGraph = @This();
 
@@ -12,12 +13,17 @@ pub fn init(allocator: Allocator, n: usize) !SccGraph {
         .internal = internal.SccGraph.init(allocator, n),
     };
 }
+
 pub fn deinit(self: *SccGraph) void {
     self.internal.deinit();
 }
+
 pub fn addEdge(self: *SccGraph, from: usize, to: usize) !void {
+    assert(from < self.internal.numVertices());
+    assert(to < self.internal.numVertices());
     try self.internal.addEdge(from, to);
 }
+
 pub fn scc(self: SccGraph) !Groups {
     return self.internal.scc();
 }
