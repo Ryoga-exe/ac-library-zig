@@ -71,13 +71,13 @@ test "FenwickTree works" {
     for (0..5) |i| {
         bit.add(i, @intCast(i + 1));
     }
-    try std.testing.expect(bit.sum(0, 5) == 15);
-    try std.testing.expect(bit.sum(0, 4) == 10);
-    try std.testing.expect(bit.sum(1, 3) == 5);
+    try std.testing.expectEqual(@as(i64, 15), bit.sum(0, 5));
+    try std.testing.expectEqual(@as(i64, 10), bit.sum(0, 4));
+    try std.testing.expectEqual(@as(i64, 5), bit.sum(1, 3));
 
     // [1, 2, 6, 4, 5]
     bit.add(2, 3);
-    try std.testing.expect(bit.sum(0, 5) == 18);
-    try std.testing.expect(bit.sum(1, 4) == 12);
-    try std.testing.expect(bit.sum(2, 3) == 6);
+    try std.testing.expectEqual(@as(i64, 18), bit.sum(0, 5));
+    try std.testing.expectEqual(@as(i64, 12), bit.sum(1, 4));
+    try std.testing.expectEqual(@as(i64, 6), bit.sum(2, 3));
 }
