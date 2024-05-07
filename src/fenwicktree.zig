@@ -23,7 +23,7 @@ pub fn FenwickTree(comptime T: type, comptime e: T, comptime op: fn (T, T) T) ty
             self.allocator.free(self.data);
         }
         pub fn add(self: *Self, idx: usize, val: T) void {
-            assert(0 <= idx and idx < self.n);
+            assert(idx < self.n);
             var p = idx + 1;
             while (p <= self.n) {
                 self.data[p - 1] = op(self.data[p - 1], val);
@@ -31,7 +31,7 @@ pub fn FenwickTree(comptime T: type, comptime e: T, comptime op: fn (T, T) T) ty
             }
         }
         pub fn sum(self: *Self, l: usize, r: usize) T {
-            assert(0 <= l and l <= r and r <= self.n);
+            assert(l <= r and r <= self.n);
             return self.accum(r) - self.accum(l);
         }
         fn accum(self: *Self, idx: usize) T {
