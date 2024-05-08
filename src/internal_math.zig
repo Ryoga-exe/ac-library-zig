@@ -96,7 +96,7 @@ pub fn invGcd(a: i64, b: i64) struct { i64, i64 } {
 test invGcd {
     const maxInt = std.math.maxInt;
     const minInt = std.math.minInt;
-    const query = &[_]struct { a: i64, b: i64, g: i64 }{
+    const tests = &[_]struct { a: i64, b: i64, g: i64 }{
         .{ .a = 0, .b = 1, .g = 1 },
         .{ .a = 0, .b = 1, .g = 1 },
         .{ .a = 0, .b = 4, .g = 4 },
@@ -113,11 +113,11 @@ test invGcd {
         .{ .a = minInt(i64), .b = maxInt(i64), .g = 1 },
     };
 
-    for (query) |q| {
-        const res = invGcd(q.a, q.b);
-        try std.testing.expectEqual(q.g, res.@"0");
+    for (tests) |t| {
+        const res = invGcd(t.a, t.b);
+        try std.testing.expectEqual(t.g, res.@"0");
 
-        const b = @as(i128, q.b);
-        try std.testing.expectEqual(@mod(@as(i128, q.g), b), @mod(@mod((@as(i128, res.@"1") * @as(i128, q.a)), b) + b, b));
+        const b = @as(i128, t.b);
+        try std.testing.expectEqual(@mod(@as(i128, t.g), b), @mod(@mod((@as(i128, res.@"1") * @as(i128, t.a)), b) + b, b));
     }
 }
