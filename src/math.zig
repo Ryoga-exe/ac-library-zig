@@ -159,3 +159,33 @@ test crt {
         try std.testing.expectEqual(expected.@"1", result.@"1");
     }
 }
+
+pub fn floorSum(n: i64, m: i64, a: i64, b: i64) i64 {
+    var ans: i64 = 0;
+    var a_ = a;
+    if (a >= m) {
+        ans +%= @divFloor((n - 1) *% n *% @divFloor(a, m), 2);
+        a_ = @mod(a, m);
+    }
+    var b_ = b;
+    if (b >= m) {
+        ans +%= n *% @divFloor(b, m);
+        b_ = @mod(b, m);
+    }
+
+    const y_max = @divFloor(a_ *% n +% b_, m);
+    const x_max = y_max *% m -% b_;
+    if (y_max == 0) {
+        return ans;
+    }
+    ans +%= (n -% @divFloor((x_max +% a_ -% 1), a_)) *% y_max;
+    ans +%= floorSum(y_max, a_, m, @mod((a_ - @mod(x_max, a_)), a_));
+    return ans;
+}
+
+test floorSum {
+    try std.testing.expectEqual(@as(i64, 0), floorSum(0, 1, 0, 0));
+    try std.testing.expectEqual(@as(i64, 500_000_000_500_000_000), floorSum(1_000_000_000, 1, 1, 1));
+    try std.testing.expectEqual(@as(i64, 499_999_999_500_000_000), floorSum(1_000_000_000, 1_000_000_000, 999_999_999, 999_999_999));
+    try std.testing.expectEqual(@as(i64, 22014575), floorSum(332955, 5590132, 2231, 999423));
+}
