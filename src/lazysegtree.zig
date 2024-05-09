@@ -1,6 +1,7 @@
 const std = @import("std");
 const Allocator = std.mem.Allocator;
 const internal = @import("internal_bit.zig");
+const assert = std.debug.assert;
 
 pub fn LazySegtree(
     comptime S: type,
@@ -11,8 +12,6 @@ pub fn LazySegtree(
     comptime composition: fn (F, F) F,
     comptime id: fn () F,
 ) type {
-    _ = composition;
-    _ = mapping;
     return struct {
         const Self = @This();
 
@@ -64,8 +63,44 @@ pub fn LazySegtree(
             self.allocator.free(self.d);
             self.allocator.free(self.lz);
         }
+        pub fn set(self: *Self, pos: usize, x: S) void {
+            assert(pos < self.n);
+            const p = pos + self.size;
+            var i: usize = self.log;
+            while (i >= 1) : (i -= 1) {
+                self.push(p >> i);
+            }
+            self.d[p] = x;
+            for (1..self.log + 1) |k| {
+                self.update(p >> k);
+            }
+        }
+        pub fn get(self: *Self, pos: usize) S {
+            assert(pos < self.n);
+            const p = pos + self.size;
+            var i: usize = self.log;
+            while (i >= 1) : (i -= 1) {
+                self.push(p >> i);
+            }
+            return self.d[p];
+        }
+        pub fn getSlice(self: *Self) []S {
+            return self.d[self.size .. self.size + self.n];
+        }
+
         fn update(self: *Self, k: usize) void {
             self.d[k] = op(self.d[2 * k], self.d[2 * k + 1]);
+        }
+        fn allApply(self: *Self, k: usize, f: F) void {
+            self.d[k] = mapping(f, self.d[k]);
+            if (k < self.size) {
+                self.lz[k] = composition(f, self.lz[k]);
+            }
+        }
+        fn push(self: *Self, k: usize) void {
+            self.allApply(2 * k, self.lz[k]);
+            self.allApply(2 * k + 1, self.lz[k]);
+            self.lz[k] = id();
         }
     };
 }
