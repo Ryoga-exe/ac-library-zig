@@ -84,8 +84,47 @@ pub fn LazySegtree(
             }
             return self.d[p];
         }
-        pub fn getSlice(self: *Self) []S {
-            return self.d[self.size .. self.size + self.n];
+        // pub fn getSlice(self: *Self) []S {
+        //     _ = self;
+        // }
+        pub fn prod(self: *Self, left: usize, right: usize) S {
+            assert(left <= right and right <= self.n);
+            if (left == right) {
+                return e();
+            }
+            const l = left + self.size;
+            const r = right + self.size;
+
+            var i: usize = self.log;
+            while (i >= 1) : (i -= 1) {
+                if (((l >> i) << i) != l) {
+                    self.push(l >> i);
+                }
+                if (((r >> i) << i) != r) {
+                    self.push((r - 1) >> i);
+                }
+            }
+
+            var sml = e();
+            var smr = e();
+            while (l < r) : ({
+                l >>= 1;
+                r >>= 1;
+            }) {
+                if (l & 1 != 0) {
+                    sml = op(sml, self.d[l]);
+                    l += 1;
+                }
+                if (r & 1 != 0) {
+                    r -= 1;
+                    smr = op(self.d[r], smr);
+                }
+            }
+
+            return op(sml, smr);
+        }
+        pub fn allProd(self: Self) S {
+            return self.d[1];
         }
 
         fn update(self: *Self, k: usize) void {
