@@ -187,6 +187,44 @@ pub fn LazySegtree(
                 }
             }
         }
+        pub fn maxRight(self: *Self, left: usize, comptime g: fn (S) bool) usize {
+            assert(left <= self.n);
+            assert(g(e()));
+
+            if (left == self.n) {
+                return self.n;
+            }
+            const l = left + self.size;
+            var i: usize = self.log;
+            while (i >= 1) : (i -= 1) {
+                self.push(l >> i);
+            }
+            var sm = e();
+            while (true) {
+                while (l % 2 == 0) {
+                    l >>= 1;
+                }
+                if (!g(op(sm, self.d[l]))) {
+                    while (l < self.size) {
+                        self.push(l);
+                        l *= 2;
+                        const res = op(sm, self.d[l]);
+                        if (g(res)) {
+                            sm = res;
+                            l += 1;
+                        }
+                    }
+                    return l - self.size;
+                }
+                sm = op(sm, self.d[l]);
+                l += 1;
+                // (l & -l) == l
+                if ((l & (~l +% 1)) == l) {
+                    break;
+                }
+            }
+            return self.n;
+        }
 
         fn update(self: *Self, k: usize) void {
             self.d[k] = op(self.d[2 * k], self.d[2 * k + 1]);
