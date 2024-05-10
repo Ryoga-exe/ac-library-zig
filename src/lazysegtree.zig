@@ -225,6 +225,44 @@ pub fn LazySegtree(
             }
             return self.n;
         }
+        pub fn minLeft(self: *Self, right: usize, comptime g: fn (S) bool) usize {
+            assert(right <= self.n);
+            assert(g(e()));
+
+            if (right == 0) {
+                return 0;
+            }
+            const r = right + self.size;
+            var i: usize = self.log;
+            while (i >= 1) : (i -= 1) {
+                self.push((r - 1) >> i);
+            }
+            var sm = e();
+            while (true) {
+                r -= 1;
+                while (r > 1 and r % 2 != 0) {
+                    r >>= 1;
+                }
+                if (!g(op(self.d[r], sm))) {
+                    while (r < self.size) {
+                        self.push(r);
+                        r = 2 * r + 1;
+                        const res = op(self.d[r], sm);
+                        if (g(res)) {
+                            sm = res;
+                            r -= 1;
+                        }
+                    }
+                    return r + 1 - self.size;
+                }
+                sm = op(self.d[r], sm);
+                // (r & -r) == r
+                if ((r & (~r +% 1)) == r) {
+                    break;
+                }
+            }
+            return 0;
+        }
 
         fn update(self: *Self, k: usize) void {
             self.d[k] = op(self.d[2 * k], self.d[2 * k + 1]);
