@@ -126,6 +126,67 @@ pub fn LazySegtree(
         pub fn allProd(self: Self) S {
             return self.d[1];
         }
+        pub fn apply(self: *Self, pos: usize, f: F) void {
+            assert(pos < self.n);
+            const p = pos + self.size;
+            var i: usize = self.log;
+            while (i >= 1) : (i -= 1) {
+                self.push(p >> i);
+            }
+            self.d[p] = mapping(f, self.d[p]);
+            i = 1;
+            while (i <= self.log) : (i += 1) {
+                self.update(p >> i);
+            }
+        }
+        pub fn applyRange(self: *Self, left: usize, right: usize, f: F) void {
+            assert(left <= right and right <= self.n);
+            if (left == right) {
+                return;
+            }
+
+            var l = left + self.size;
+            var r = right + self.size;
+
+            var i: usize = self.log;
+            while (i >= 1) : (i -= 1) {
+                if (((l >> i) << i) != l) {
+                    self.push(l >> i);
+                }
+                if (((r >> i) << i) != r) {
+                    self.push((r - 1) >> i);
+                }
+            }
+
+            {
+                const l2 = l;
+                const r2 = r;
+                while (l < r) {
+                    if (l & 1 != 0) {
+                        self.allApply(l, f);
+                        l += 1;
+                    }
+                    if (r & 1 != 0) {
+                        r -= 1;
+                        self.allApply(r, f);
+                    }
+                    l >>= 1;
+                    r >>= 1;
+                }
+                l = l2;
+                r = r2;
+            }
+
+            i = 1;
+            while (i <= self.log) : (i += 1) {
+                if (((l >> i) << i) != l) {
+                    self.update(l >> i);
+                }
+                if (((r >> i) << i) != r) {
+                    self.update((r - 1) >> i);
+                }
+            }
+        }
 
         fn update(self: *Self, k: usize) void {
             self.d[k] = op(self.d[2 * k], self.d[2 * k + 1]);
