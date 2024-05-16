@@ -280,3 +280,86 @@ pub fn LazySegtree(
         }
     };
 }
+
+test "Segtree: ALPC-L sample" {
+    // https://atcoder.jp/contests/practice2/tasks/practice2_l
+    const n = 5;
+    const a = &[_]i64{ 0, 1, 0, 0, 1 };
+    const query = &[_]struct {
+        t: usize,
+        l: usize,
+        r: usize,
+        expect: ?i64,
+    }{
+        .{ .t = 2, .l = 1, .r = 5, .expect = 2 },
+        .{ .t = 1, .l = 3, .r = 4, .expect = null },
+        .{ .t = 2, .l = 2, .r = 5, .expect = 0 },
+        .{ .t = 1, .l = 1, .r = 3, .expect = null },
+        .{ .t = 2, .l = 1, .r = 2, .expect = 1 },
+    };
+    const allocator = std.testing.allocator;
+    var seg = try LazySegtree(
+        tests.S,
+        tests.op,
+        tests.e,
+        tests.F,
+        tests.mapping,
+        tests.composition,
+        tests.id,
+    ).init(allocator, n);
+    defer seg.deinit();
+
+    for (0..n) |i| {
+        if (a[i] == 0) {
+            seg.set(i, tests.S{ .zero = 1, .one = 0, .inversion = 0 });
+        } else {
+            seg.set(i, tests.S{ .zero = 0, .one = 1, .inversion = 0 });
+        }
+    }
+
+    for (query) |q| {
+        var result: ?i64 = null;
+        if (q.t == 1) {
+            seg.applyRange(q.l, q.r, true);
+        } else {
+            result = seg.prod(q.l, q.r).inversion;
+        }
+        try std.testing.expectEqual(q.expect, result);
+    }
+}
+
+const tests = struct {
+    const S = struct {
+        zero: i64,
+        one: i64,
+        inversion: i64,
+    };
+    const F = bool;
+    fn op(l: S, r: S) S {
+        return S{
+            .zero = l.zero + r.zero,
+            .one = l.one + r.zero,
+            .inversion = l.inversion + r.inversion + l.one * r.zero,
+        };
+    }
+    fn e() S {
+        return S{ .zero = 0, .one = 0, .inversion = 0 };
+    }
+    fn mapping(l: F, r: S) S {
+        if (!l) {
+            return r;
+        }
+        // swap
+        return S{
+            .zero = r.one,
+            .one = r.zero,
+            .inversion = r.one * r.zero - r.inversion,
+        };
+    }
+    fn composition(l: F, r: F) F {
+        return (l and !r) or (!l and r);
+    }
+    fn id() F {
+        return false;
+    }
+};
