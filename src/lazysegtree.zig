@@ -68,11 +68,11 @@ pub fn LazySegtree(
             const p = pos + self.size;
             var i: usize = self.log;
             while (i >= 1) : (i -= 1) {
-                self.push(p >> i);
+                self.push(p >> @intCast(i));
             }
             self.d[p] = x;
             for (1..self.log + 1) |k| {
-                self.update(p >> k);
+                self.update(p >> @intCast(k));
             }
         }
         pub fn get(self: *Self, pos: usize) S {
@@ -92,16 +92,16 @@ pub fn LazySegtree(
             if (left == right) {
                 return e();
             }
-            const l = left + self.size;
-            const r = right + self.size;
+            var l = left + self.size;
+            var r = right + self.size;
 
             var i: usize = self.log;
             while (i >= 1) : (i -= 1) {
-                if (((l >> i) << i) != l) {
-                    self.push(l >> i);
+                if (((l >> @intCast(i)) << @intCast(i)) != l) {
+                    self.push(l >> @intCast(i));
                 }
-                if (((r >> i) << i) != r) {
-                    self.push((r - 1) >> i);
+                if (((r >> @intCast(i)) << @intCast(i)) != r) {
+                    self.push((r - 1) >> @intCast(i));
                 }
             }
 
@@ -131,12 +131,12 @@ pub fn LazySegtree(
             const p = pos + self.size;
             var i: usize = self.log;
             while (i >= 1) : (i -= 1) {
-                self.push(p >> i);
+                self.push(p >> @intCast(i));
             }
             self.d[p] = mapping(f, self.d[p]);
             i = 1;
             while (i <= self.log) : (i += 1) {
-                self.update(p >> i);
+                self.update(p >> @intCast(i));
             }
         }
         pub fn applyRange(self: *Self, left: usize, right: usize, f: F) void {
@@ -150,11 +150,11 @@ pub fn LazySegtree(
 
             var i: usize = self.log;
             while (i >= 1) : (i -= 1) {
-                if (((l >> i) << i) != l) {
-                    self.push(l >> i);
+                if (((l >> @intCast(i)) << @intCast(i)) != l) {
+                    self.push(l >> @intCast(i));
                 }
-                if (((r >> i) << i) != r) {
-                    self.push((r - 1) >> i);
+                if (((r >> @intCast(i)) << @intCast(i)) != r) {
+                    self.push((r - 1) >> @intCast(i));
                 }
             }
 
@@ -179,11 +179,11 @@ pub fn LazySegtree(
 
             i = 1;
             while (i <= self.log) : (i += 1) {
-                if (((l >> i) << i) != l) {
-                    self.update(l >> i);
+                if (((l >> @intCast(i)) << @intCast(i)) != l) {
+                    self.update(l >> @intCast(i));
                 }
-                if (((r >> i) << i) != r) {
-                    self.update((r - 1) >> i);
+                if (((r >> @intCast(i)) << @intCast(i)) != r) {
+                    self.update((r - 1) >> @intCast(i));
                 }
             }
         }
