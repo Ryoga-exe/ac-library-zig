@@ -50,6 +50,7 @@ pub fn LazySegtree(
                 .allocator = allocator,
             };
             @memset(self.d, e());
+            @memset(self.lz, id());
             for (0..n) |i| {
                 self.d[size + i] = v[i];
             }
