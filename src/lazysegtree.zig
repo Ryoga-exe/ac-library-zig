@@ -453,28 +453,34 @@ const tests = struct {
             f_base.k = @intCast(k);
             const f = f_base.f;
             for (0..n + 1) |l| {
-                try std.testing.expectEqual(expected: {
-                    var acc = max_add.e();
-                    for (l..n) |pos| {
-                        acc = max_add.op(acc, base[pos]);
-                        if (!f(acc)) {
-                            break :expected pos;
+                try std.testing.expectEqual(
+                    expected: {
+                        var acc = max_add.e();
+                        for (l..n) |pos| {
+                            acc = max_add.op(acc, base[pos]);
+                            if (!f(acc)) {
+                                break :expected pos;
+                            }
                         }
-                    }
-                    break :expected n;
-                }, segtree.maxRight(l, f));
+                        break :expected n;
+                    },
+                    segtree.maxRight(l, f),
+                );
             }
             for (0..n + 1) |r| {
-                try std.testing.expectEqual(expected: {
-                    var acc = max_add.e();
-                    for (0..r) |pos| {
-                        acc = max_add.op(acc, base[r - pos - 1]);
-                        if (!f(acc)) {
-                            break :expected r - pos;
+                try std.testing.expectEqual(
+                    expected: {
+                        var acc = max_add.e();
+                        for (0..r) |pos| {
+                            acc = max_add.op(acc, base[r - pos - 1]);
+                            if (!f(acc)) {
+                                break :expected r - pos;
+                            }
                         }
-                    }
-                    break :expected 0;
-                }, segtree.minLeft(r, f));
+                        break :expected 0;
+                    },
+                    segtree.minLeft(r, f),
+                );
             }
         }
     }
