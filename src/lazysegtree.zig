@@ -162,7 +162,10 @@ pub fn LazySegtree(
             {
                 const l2 = l;
                 const r2 = r;
-                while (l < r) {
+                while (l < r) : ({
+                    l >>= 1;
+                    r >>= 1;
+                }) {
                     if (l & 1 != 0) {
                         self.allApply(l, f);
                         l += 1;
@@ -171,8 +174,6 @@ pub fn LazySegtree(
                         r -= 1;
                         self.allApply(r, f);
                     }
-                    l >>= 1;
-                    r >>= 1;
                 }
                 l = l2;
                 r = r2;
@@ -321,9 +322,9 @@ test "Segtree: ALPC-L sample" {
     for (query) |q| {
         var result: ?i64 = null;
         if (q.t == 1) {
-            seg.applyRange(q.l, q.r, true);
+            seg.applyRange(q.l - 1, q.r, true);
         } else {
-            result = seg.prod(q.l, q.r).inversion;
+            result = seg.prod(q.l - 1, q.r).inversion;
         }
         try std.testing.expectEqual(q.expect, result);
     }
@@ -339,7 +340,7 @@ const tests = struct {
     fn op(l: S, r: S) S {
         return S{
             .zero = l.zero + r.zero,
-            .one = l.one + r.zero,
+            .one = l.one + r.one,
             .inversion = l.inversion + r.inversion + l.one * r.zero,
         };
     }
