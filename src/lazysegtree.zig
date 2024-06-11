@@ -376,7 +376,7 @@ const tests = struct {
             return @max(x, y);
         }
         fn e() S {
-            return std.math.maxInt(S);
+            return std.math.minInt(S);
         }
         fn mapping(f: F, x: S) S {
             return f + x;
