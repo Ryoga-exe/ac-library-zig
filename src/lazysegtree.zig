@@ -435,6 +435,48 @@ const tests = struct {
                 try std.testing.expect(check(base, segtree, i, j));
             }
         }
+        try std.testing.expectEqual(expected: {
+            var acc = max_add.e();
+            for (0..n) |i| {
+                acc = @max(acc, base[i]);
+            }
+            break :expected acc;
+        }, segtree.allProd());
+
+        const f_base = struct {
+            var k: max_add.S = 0;
+            pub fn f(x: max_add.S) bool {
+                return x < k;
+            }
+        };
+        for (0..10) |k| {
+            f_base.k = @intCast(k);
+            const f = f_base.f;
+            for (0..n + 1) |l| {
+                try std.testing.expectEqual(expected: {
+                    var acc = max_add.e();
+                    for (l..n) |pos| {
+                        acc = max_add.op(acc, base[pos]);
+                        if (!f(acc)) {
+                            break :expected pos;
+                        }
+                    }
+                    break :expected n;
+                }, segtree.maxRight(l, f));
+            }
+            for (0..n + 1) |r| {
+                try std.testing.expectEqual(expected: {
+                    var acc = max_add.e();
+                    for (0..r) |pos| {
+                        acc = max_add.op(acc, base[r - pos - 1]);
+                        if (!f(acc)) {
+                            break :expected r - pos;
+                        }
+                    }
+                    break :expected 0;
+                }, segtree.minLeft(r, f));
+            }
+        }
     }
     fn check(base: []const i32, segtree: *LazySegtreeNS(max_add), l: usize, r: usize) bool {
         var expected: i32 = max_add.e();
