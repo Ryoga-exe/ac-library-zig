@@ -197,8 +197,8 @@ pub fn LazySegtree(
             if (left == self.n) {
                 return self.n;
             }
-            const l = left + self.size;
-            var i: usize = self.log;
+            var l = left + self.size;
+            var i: u6 = @intCast(self.log);
             while (i >= 1) : (i -= 1) {
                 self.push(l >> i);
             }
@@ -235,8 +235,8 @@ pub fn LazySegtree(
             if (right == 0) {
                 return 0;
             }
-            const r = right + self.size;
-            var i: usize = self.log;
+            var r = right + self.size;
+            var i: u6 = @intCast(self.log);
             while (i >= 1) : (i -= 1) {
                 self.push((r - 1) >> i);
             }
