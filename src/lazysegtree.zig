@@ -80,7 +80,7 @@ pub fn LazySegtree(
         pub fn get(self: *Self, pos: usize) S {
             assert(pos < self.n);
             const p = pos + self.size;
-            var i: usize = self.log;
+            var i: u6 = @intCast(self.log);
             while (i >= 1) : (i -= 1) {
                 self.push(p >> i);
             }
@@ -284,7 +284,52 @@ pub fn LazySegtree(
     };
 }
 
-test "Segtree: ALPC-L sample" {
+pub fn LazySegtreeNS(comptime ns: anytype) type {
+    return LazySegtree(
+        ns.S,
+        ns.op,
+        ns.e,
+        ns.F,
+        ns.mapping,
+        ns.composition,
+        ns.id,
+    );
+}
+
+test "LazySegtree works" {
+    const allocator = std.testing.allocator;
+    var base = [_]i32{ 3, 1, 4, 1, 5, 9, 2, 6, 5, 3 };
+    var segtree = try LazySegtreeNS(tests.max_add).initFromSlice(allocator, &base);
+    defer segtree.deinit();
+
+    try tests.checkSegtree(&base, &segtree);
+
+    segtree.set(6, 5);
+    base[6] = 5;
+    try tests.checkSegtree(&base, &segtree);
+
+    segtree.apply(5, 1);
+    base[5] += 1;
+    try tests.checkSegtree(&base, &segtree);
+
+    segtree.set(6, 0);
+    base[6] = 0;
+    try tests.checkSegtree(&base, &segtree);
+
+    segtree.applyRange(3, 8, 2);
+    for (3..8) |i| {
+        base[i] += 2;
+    }
+    try tests.checkSegtree(&base, &segtree);
+
+    segtree.applyRange(2, 6, 7);
+    for (2..6) |i| {
+        base[i] += 7;
+    }
+    try tests.checkSegtree(&base, &segtree);
+}
+
+test "LazySegtree: ALPC-L sample" {
     // https://atcoder.jp/contests/practice2/tasks/practice2_l
     const n = 5;
     const a = &[_]i64{ 0, 1, 0, 0, 1 };
@@ -301,22 +346,14 @@ test "Segtree: ALPC-L sample" {
         .{ .t = 2, .l = 1, .r = 2, .expect = 1 },
     };
     const allocator = std.testing.allocator;
-    var seg = try LazySegtree(
-        tests.S,
-        tests.op,
-        tests.e,
-        tests.F,
-        tests.mapping,
-        tests.composition,
-        tests.id,
-    ).init(allocator, n);
+    var seg = try LazySegtreeNS(tests.inversion).init(allocator, n);
     defer seg.deinit();
 
     for (0..n) |i| {
         if (a[i] == 0) {
-            seg.set(i, tests.S{ .zero = 1, .one = 0, .inversion = 0 });
+            seg.set(i, tests.inversion.S{ .zero = 1, .one = 0, .inversion = 0 });
         } else {
-            seg.set(i, tests.S{ .zero = 0, .one = 1, .inversion = 0 });
+            seg.set(i, tests.inversion.S{ .zero = 0, .one = 1, .inversion = 0 });
         }
     }
 
@@ -332,37 +369,78 @@ test "Segtree: ALPC-L sample" {
 }
 
 const tests = struct {
-    const S = struct {
-        zero: i64,
-        one: i64,
-        inversion: i64,
-    };
-    const F = bool;
-    fn op(l: S, r: S) S {
-        return S{
-            .zero = l.zero + r.zero,
-            .one = l.one + r.one,
-            .inversion = l.inversion + r.inversion + l.one * r.zero,
-        };
-    }
-    fn e() S {
-        return S{ .zero = 0, .one = 0, .inversion = 0 };
-    }
-    fn mapping(l: F, r: S) S {
-        if (!l) {
-            return r;
+    const max_add = struct {
+        const S = i32;
+        const F = i32;
+        fn op(x: S, y: S) S {
+            return @max(x, y);
         }
-        // swap
-        return S{
-            .zero = r.one,
-            .one = r.zero,
-            .inversion = r.one * r.zero - r.inversion,
+        fn e() S {
+            return std.math.maxInt(S);
+        }
+        fn mapping(f: F, x: S) S {
+            return f + x;
+        }
+        fn composition(f: F, g: F) F {
+            return f + g;
+        }
+        fn id() F {
+            return 0;
+        }
+    };
+    const inversion = struct {
+        const S = struct {
+            zero: i64,
+            one: i64,
+            inversion: i64,
         };
+        const F = bool;
+        fn op(l: S, r: S) S {
+            return S{
+                .zero = l.zero + r.zero,
+                .one = l.one + r.one,
+                .inversion = l.inversion + r.inversion + l.one * r.zero,
+            };
+        }
+        fn e() S {
+            return S{ .zero = 0, .one = 0, .inversion = 0 };
+        }
+        fn mapping(l: F, r: S) S {
+            if (!l) {
+                return r;
+            }
+            // swap
+            return S{
+                .zero = r.one,
+                .one = r.zero,
+                .inversion = r.one * r.zero - r.inversion,
+            };
+        }
+        fn composition(l: F, r: F) F {
+            return (l and !r) or (!l and r);
+        }
+        fn id() F {
+            return false;
+        }
+    };
+    fn checkSegtree(base: []const i32, segtree: *LazySegtreeNS(max_add)) !void {
+        const n = base.len;
+        for (0..n) |i| {
+            try std.testing.expectEqual(base[i], segtree.get(i));
+        }
+        for (0..n + 1) |i| {
+            try std.testing.expect(check(base, segtree, 0, i));
+            try std.testing.expect(check(base, segtree, i, n));
+            for (i..n + 1) |j| {
+                try std.testing.expect(check(base, segtree, i, j));
+            }
+        }
     }
-    fn composition(l: F, r: F) F {
-        return (l and !r) or (!l and r);
-    }
-    fn id() F {
-        return false;
+    fn check(base: []const i32, segtree: *LazySegtreeNS(max_add), l: usize, r: usize) bool {
+        var expected: i32 = max_add.e();
+        for (l..r) |i| {
+            expected = max_add.op(expected, base[i]);
+        }
+        return expected == segtree.prod(l, r);
     }
 };
