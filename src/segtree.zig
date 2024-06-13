@@ -165,6 +165,14 @@ pub fn Segtree(comptime S: type, comptime op: fn (S, S) S, comptime e: fn () S) 
     };
 }
 
+pub fn SegtreeNS(comptime ns: anytype) type {
+    return Segtree(
+        ns.S,
+        ns.op,
+        ns.e,
+    );
+}
+
 test "Segtree works" {
     const allocator = std.testing.allocator;
     var base = [_]i32{ 3, 1, 4, 1, 5, 9, 2, 6, 5, 3 };
@@ -198,7 +206,7 @@ test "Segtree: ALPC-J sample" {
         .{ .t = 3, .x = 1, .y = 3, .expect = 6 },
     };
     const allocator = std.testing.allocator;
-    var segtree = try Segtree(usize, monoid.max(usize).op, monoid.additive(usize).e).initFromSlice(allocator, a);
+    var segtree = try SegtreeNS(monoid.max(usize)).initFromSlice(allocator, a);
     defer segtree.deinit();
 
     try std.testing.expectEqualSlices(usize, &[_]usize{ 1, 2, 3, 2, 1 }, segtree.getSlice());
@@ -227,21 +235,23 @@ test "Segtree: ALPC-J sample" {
 const monoid = struct {
     fn additive(comptime T: type) type {
         return struct {
-            fn op(x: T, y: T) T {
+            const S = T;
+            fn op(x: S, y: S) S {
                 return x + y;
             }
-            fn e() T {
+            fn e() S {
                 return 0;
             }
         };
     }
     fn max(comptime T: type) type {
         return struct {
-            fn op(x: T, y: T) T {
+            const S = T;
+            fn op(x: S, y: S) S {
                 return @max(x, y);
             }
-            fn e() T {
-                return std.math.minInt(T);
+            fn e() S {
+                return std.math.minInt(S);
             }
         };
     }
