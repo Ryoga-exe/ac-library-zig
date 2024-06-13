@@ -16,7 +16,7 @@ pub fn Segtree(comptime S: type, comptime op: fn (S, S) S, comptime e: fn () S) 
         pub fn init(allocator: Allocator, n: usize) !Self {
             const size = internal.bitCeil(n);
             const log = @ctz(size);
-            var self = Self{
+            const self = Self{
                 .n = n,
                 .size = size,
                 .log = log,
@@ -74,7 +74,10 @@ pub fn Segtree(comptime S: type, comptime op: fn (S, S) S, comptime e: fn () S) 
             var l = left + self.size;
             var r = right + self.size;
 
-            while (l < r) {
+            while (l < r) : ({
+                l >>= 1;
+                r >>= 1;
+            }) {
                 if (l & 1 != 0) {
                     sml = op(sml, self.d[l]);
                     l += 1;
@@ -83,8 +86,6 @@ pub fn Segtree(comptime S: type, comptime op: fn (S, S) S, comptime e: fn () S) 
                     r -= 1;
                     smr = op(self.d[r], smr);
                 }
-                l >>= 1;
-                r >>= 1;
             }
 
             return op(sml, smr);
@@ -202,6 +203,13 @@ test "Segtree: ALPC-J sample" {
 
     try std.testing.expectEqualSlices(usize, &[_]usize{ 1, 2, 3, 2, 1 }, segtree.getSlice());
 
+    const f = struct {
+        var target: usize = undefined;
+        fn f(v: usize) bool {
+            return v < target;
+        }
+    };
+
     for (query) |q| {
         var result: ?usize = null;
         if (q.t == 1) {
@@ -209,8 +217,8 @@ test "Segtree: ALPC-J sample" {
         } else if (q.t == 2) {
             result = segtree.prod(q.x - 1, q.y);
         } else if (q.t == 3) {
-            tests.target = q.y;
-            result = segtree.maxRight(q.x - 1, tests.f) + 1;
+            f.target = q.y;
+            result = segtree.maxRight(q.x - 1, f.f) + 1;
         }
         try std.testing.expectEqual(q.expect, result);
     }
@@ -240,14 +248,6 @@ const monoid = struct {
 };
 
 const tests = struct {
-    var target: usize = 0;
-    var target_i: usize = 0;
-    fn f(v: usize) bool {
-        return v < target;
-    }
-    fn fi(v: i32) bool {
-        return v < target_i;
-    }
     fn checkSegtree(base: []const i32, segtree: anytype) !void {
         const n = base.len;
         for (0..n) |i| {
@@ -260,33 +260,44 @@ const tests = struct {
                 try std.testing.expect(check(base, segtree, i, j));
             }
         }
+        try std.testing.expectEqual(expected: {
+            var acc = monoid.max(i32).e();
+            for (0..n) |i| {
+                acc = @max(acc, base[i]);
+            }
+            break :expected acc;
+        }, segtree.allProd());
+        const f = struct {
+            var target: i32 = undefined;
+            fn f(v: i32) bool {
+                return v < target;
+            }
+        };
         for (0..10) |k| {
-            target_i = k;
+            f.target = @intCast(k);
             for (0..n + 1) |l| {
-                const expected = blk: {
+                try std.testing.expectEqual(expected: {
                     var acc = monoid.max(i32).e();
                     for (l..n) |pos| {
                         acc = monoid.max(i32).op(acc, base[pos]);
-                        if (!fi(acc)) {
-                            break :blk pos;
+                        if (!f.f(acc)) {
+                            break :expected pos;
                         }
                     }
-                    break :blk n;
-                };
-                try std.testing.expectEqual(expected, segtree.maxRight(l, fi));
+                    break :expected n;
+                }, segtree.maxRight(l, f.f));
             }
             for (0..n + 1) |r| {
-                const expected = blk: {
+                try std.testing.expectEqual(expected: {
                     var acc = monoid.max(i32).e();
                     for (0..r) |pos| {
                         acc = monoid.max(i32).op(acc, base[r - pos - 1]);
-                        if (!fi(acc)) {
-                            break :blk r - pos;
+                        if (!f.f(acc)) {
+                            break :expected r - pos;
                         }
                     }
-                    break :blk 0;
-                };
-                try std.testing.expectEqual(expected, segtree.minLeft(r, fi));
+                    break :expected 0;
+                }, segtree.minLeft(r, f.f));
             }
         }
     }
