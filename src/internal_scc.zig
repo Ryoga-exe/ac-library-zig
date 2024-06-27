@@ -24,7 +24,7 @@ pub const SccGraph = struct {
     allocator: Allocator,
 
     pub fn init(allocator: Allocator, n: usize) Self {
-        var self = Self{
+        const self = Self{
             .n = n,
             .edges = std.ArrayList(std.meta.Tuple(&.{ usize, Edge })).init(allocator),
             .allocator = allocator,

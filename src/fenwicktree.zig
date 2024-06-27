@@ -11,7 +11,7 @@ pub fn FenwickTree(comptime T: type, comptime e: T, comptime op: fn (T, T) T) ty
         allocator: Allocator,
 
         pub fn init(allocator: Allocator, n: usize) !Self {
-            var self = Self{
+            const self = Self{
                 .n = n,
                 .data = try allocator.alloc(T, n),
                 .allocator = allocator,
