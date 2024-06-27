@@ -114,10 +114,10 @@ test invGcd {
     };
 
     for (tests) |t| {
-        const res = invGcd(t.a, t.b);
-        try std.testing.expectEqual(t.g, res.@"0");
+        const g, const x = invGcd(t.a, t.b);
+        try std.testing.expectEqual(t.g, g);
 
         const b = @as(i128, t.b);
-        try std.testing.expectEqual(@mod(@as(i128, t.g), b), @mod(@mod((@as(i128, res.@"1") * @as(i128, t.a)), b) + b, b));
+        try std.testing.expectEqual(@mod(@as(i128, t.g), b), @mod(@mod((@as(i128, x) * @as(i128, t.a)), b) + b, b));
     }
 }

@@ -74,15 +74,14 @@ pub const SccGraph = struct {
         return .{ env.group_num, try self.allocator.dupe(usize, env.ids) };
     }
     pub fn scc(self: Self) !Groups {
-        const ids = try self.sccIds();
-        defer self.allocator.free(ids.@"1");
-        const group_num = ids.@"0";
+        const group_num, const ids = try self.sccIds();
+        defer self.allocator.free(ids);
 
         var group_index = try self.allocator.alloc(?usize, self.n);
         defer self.allocator.free(group_index);
         @memset(group_index, 0);
         for (0..self.n) |i| {
-            group_index[i] = ids.@"1"[i];
+            group_index[i] = ids[i];
         }
         return try Groups.init(self.allocator, group_num, group_index);
     }
