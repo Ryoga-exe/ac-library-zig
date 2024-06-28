@@ -68,7 +68,8 @@ test "SccGraph: ALPC-G sample" {
     var graph = try SccGraph.init(allocator, n);
     defer graph.deinit();
     for (edges) |edge| {
-        try graph.addEdge(edge.@"0", edge.@"1");
+        const from, const to = edge;
+        try graph.addEdge(from, to);
     }
     var scc_graph = try graph.scc();
     defer scc_graph.deinit();

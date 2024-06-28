@@ -10,7 +10,7 @@ parent_or_size: []i32,
 allocator: Allocator,
 
 pub fn init(allocator: Allocator, n: usize) !Dsu {
-    var self = Dsu{
+    const self = Dsu{
         .n = n,
         .parent_or_size = try allocator.alloc(i32, n),
         .allocator = allocator,
