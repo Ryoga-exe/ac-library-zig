@@ -134,7 +134,7 @@ test comptimePowMod {
         .{ .x = 123, .n = 456, .m = 1_000_000_007, .expects = 565291922 },
     };
     inline for (tests) |t| {
-        try std.testing.expectEqual(comptimePowMod(t.x, t.n, t.m), t.expects);
+        try std.testing.expectEqual(t.expects, comptimePowMod(t.x, t.n, t.m));
     }
 }
 
@@ -202,7 +202,7 @@ test comptimeIsPrime {
         .{ .x = std.math.maxInt(i32), .expects = true },
     };
     inline for (tests) |t| {
-        try std.testing.expect(comptimeIsPrime(t.x) == t.expects);
+        try std.testing.expectEqual(t.expects, comptimeIsPrime(t.x));
     }
 }
 
