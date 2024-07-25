@@ -142,14 +142,31 @@ test comptimePowMod {
 // M. Forisek and J. Jancina,
 // Fast Primality Testing for Integers That Fit into a Machine Word
 pub fn comptimeIsPrime(n: comptime_int) bool {
-    switch (n) {
-        2, 7, 61 => return true,
-        else => {
-            if (n <= 1 or n % 2 == 0) {
-                return false;
-            }
-        },
+    if (n == 2) {
+        return true;
+    } else if (n <= 1 or n % 2 == 0) {
+        return false;
     }
+    const base = std.math.log2(n);
+    const upper = (1 << base) - 1;
+    const magnitude_bits = if (upper >= n) base else base + 1;
+
+    // Reference:
+    // https://en.wikipedia.org/wiki/Miller%E2%80%93Rabin_primality_test
+    // https://miller-rabin.appspot.com/
+    // https://oeis.org/A014233
+    const seq = switch (magnitude_bits) {
+        0...32 => [_]comptime_int{ 2, 7, 61 },
+        33...64 => [_]comptime_int{ 2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37 },
+        else => @compileError("n is too large"),
+    };
+
+    inline for (seq) |v| {
+        if (n == v) {
+            return true;
+        }
+    }
+
     const d = comptime blk: {
         var d = n - 1;
         while (d % 2 == 0) {
@@ -157,7 +174,7 @@ pub fn comptimeIsPrime(n: comptime_int) bool {
         }
         break :blk d;
     };
-    inline for ([_]comptime_int{ 2, 7, 61 }) |a| {
+    inline for (seq) |a| {
         const t, const y = comptime blk: {
             var t = d;
             var y = comptimePowMod(a, t, n);
@@ -200,6 +217,8 @@ test comptimeIsPrime {
         .{ .x = 1_000_000_007, .expects = true },
 
         .{ .x = std.math.maxInt(i32), .expects = true },
+        .{ .x = std.math.maxInt(i62), .expects = true },
+        .{ .x = std.math.maxInt(i64), .expects = false },
     };
     inline for (tests) |t| {
         try std.testing.expectEqual(t.expects, comptimeIsPrime(t.x));
