@@ -44,8 +44,8 @@ pub fn StaticModint(comptime m: comptime_int) type {
                 else => std.math.comptimeMod(v, m),
             };
             var y: T = self.v -% x;
-            if (y > m) {
-                y -%= m;
+            if (y >= m) {
+                y +%= m;
             }
             return Self{
                 .v = y,
