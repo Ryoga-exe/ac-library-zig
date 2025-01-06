@@ -2,34 +2,43 @@ const std = @import("std");
 const Allocator = std.mem.Allocator;
 const assert = std.debug.assert;
 
-fn saNaive(allocator: Allocator, s: []i32) Allocator.Error![]usize {
+fn saNaive(allocator: Allocator, s: []const i32) Allocator.Error![]usize {
     const n = s.len;
     var sa = try allocator.alloc(usize, n);
     errdefer allocator.free(sa);
     for (0..n) |i| {
         sa[i] = i;
     }
-    std.mem.sort(usize, &sa, {}, struct {
-        fn cmp(lhs: usize, rhs: usize) bool {
+    const cmp = struct {
+        var closure: struct {
+            n: usize,
+            s: []const i32,
+        } = undefined;
+        fn f(_: void, lhs: usize, rhs: usize) bool {
             var l = lhs;
             var r = rhs;
             if (l == r) {
                 return false;
             }
-            while (l < n and r < n) {
-                if (s[l] != s[r]) {
-                    return s[l] < s[r];
+            while (l < closure.n and r < closure.n) {
+                if (closure.s[l] != closure.s[r]) {
+                    return closure.s[l] < closure.s[r];
                 }
                 l += 1;
                 r += 1;
             }
-            return l == n;
+            return l == closure.n;
         }
-    }.cmp);
+    };
+    cmp.closure = .{
+        .n = n,
+        .s = s,
+    };
+    std.mem.sort(usize, sa, {}, cmp.f);
     return sa;
 }
 
-fn saDoubling(allocator: Allocator, s: []i32) Allocator.Error![]usize {
+fn saDoubling(allocator: Allocator, s: []const i32) Allocator.Error![]usize {
     const n = s.len;
     var sa = try allocator.alloc(usize, n);
     errdefer allocator.free(sa);
@@ -41,24 +50,34 @@ fn saDoubling(allocator: Allocator, s: []i32) Allocator.Error![]usize {
     const tmp = try allocator.alloc(i32, n);
     defer allocator.free(tmp);
     @memset(tmp, 0);
-    const k = 1;
+    var k: usize = 1;
     while (k < n) : (k *= 2) {
         const cmp = struct {
-            fn cmp(x: usize, y: usize) bool {
-                if (rnk[x] != rnk[y]) {
-                    return rnk[x] < rnk[y];
+            var closure: struct {
+                n: usize,
+                k: usize,
+                rnk: []i32,
+            } = undefined;
+            fn f(_: void, x: usize, y: usize) bool {
+                if (closure.rnk[x] != closure.rnk[y]) {
+                    return closure.rnk[x] < closure.rnk[y];
                 }
-                const rx = if (x + k < n) rnk[x + k] else -1;
-                const ry = if (y + k < n) rnk[y + k] else -1;
+                const rx = if (x + closure.k < closure.n) closure.rnk[x + closure.k] else -1;
+                const ry = if (y + closure.k < closure.n) closure.rnk[y + closure.k] else -1;
                 return rx < ry;
             }
-        }.cmp;
-        std.mem.sort(usize, &sa, {}, cmp);
+        };
+        cmp.closure = .{
+            .n = n,
+            .k = k,
+            .rnk = rnk,
+        };
+        std.mem.sort(usize, sa, {}, cmp.f);
         tmp[sa[0]] = 0;
         for (1..n) |i| {
-            tmp[sa[i]] = tmp[sa[i - 1]] + (@intFromBool(cmp(sa[i - 1], sa[i])));
+            tmp[sa[i]] = tmp[sa[i - 1]] + (@intFromBool(cmp.f({}, sa[i - 1], sa[i])));
         }
-        std.mem.swap(i32, tmp, rnk);
+        @memcpy(rnk, tmp);
     }
     return sa;
 }
