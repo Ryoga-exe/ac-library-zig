@@ -79,6 +79,7 @@ pub fn lcpArrayArbitrary(comptime T: type, allocator: Allocator, s: []const T, s
     }
     var lcp = try allocator.alloc(usize, n - 1);
     errdefer allocator.free(lcp);
+    @memset(lcp, 0);
     var h: usize = 0;
     for (0..n - 1) |i| {
         h -|= 1;
