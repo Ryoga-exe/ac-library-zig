@@ -2,12 +2,65 @@ const std = @import("std");
 const Allocator = std.mem.Allocator;
 const assert = std.debug.assert;
 
-fn saNaive(s: []i32) void {
-    _ = s; // autofix
+fn saNaive(allocator: Allocator, s: []i32) Allocator.Error![]usize {
+    const n = s.len;
+    var sa = try allocator.alloc(usize, n);
+    errdefer allocator.free(sa);
+    for (0..n) |i| {
+        sa[i] = i;
+    }
+    std.mem.sort(usize, &sa, {}, struct {
+        fn cmp(lhs: usize, rhs: usize) bool {
+            var l = lhs;
+            var r = rhs;
+            if (l == r) {
+                return false;
+            }
+            while (l < n and r < n) {
+                if (s[l] != s[r]) {
+                    return s[l] < s[r];
+                }
+                l += 1;
+                r += 1;
+            }
+            return l == n;
+        }
+    }.cmp);
+    return sa;
 }
 
-fn saDoubling(s: []i32) void {
-    _ = s; // autofix
+fn saDoubling(allocator: Allocator, s: []i32) Allocator.Error![]usize {
+    const n = s.len;
+    var sa = try allocator.alloc(usize, n);
+    errdefer allocator.free(sa);
+    for (0..n) |i| {
+        sa[i] = i;
+    }
+    const rnk = try allocator.dupe(i32, s);
+    defer allocator.free(rnk);
+    const tmp = try allocator.alloc(i32, n);
+    defer allocator.free(tmp);
+    @memset(tmp, 0);
+    const k = 1;
+    while (k < n) : (k *= 2) {
+        const cmp = struct {
+            fn cmp(x: usize, y: usize) bool {
+                if (rnk[x] != rnk[y]) {
+                    return rnk[x] < rnk[y];
+                }
+                const rx = if (x + k < n) rnk[x + k] else -1;
+                const ry = if (y + k < n) rnk[y + k] else -1;
+                return rx < ry;
+            }
+        }.cmp;
+        std.mem.sort(usize, &sa, {}, cmp);
+        tmp[sa[0]] = 0;
+        for (1..n) |i| {
+            tmp[sa[i]] = tmp[sa[i - 1]] + (@intFromBool(cmp(sa[i - 1], sa[i])));
+        }
+        std.mem.swap(i32, tmp, rnk);
+    }
+    return sa;
 }
 
 fn saIs() void {}
