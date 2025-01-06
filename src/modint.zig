@@ -36,7 +36,7 @@ pub fn StaticModint(comptime m: comptime_int) type {
         }
 
         pub inline fn add(self: Self, v: anytype) Self {
-            const x: U = switch (@TypeOf(v)) {
+            const x: U = comptime switch (@TypeOf(v)) {
                 inline Self => v.v,
                 inline else => std.math.comptimeMod(v, m),
             };
@@ -46,7 +46,7 @@ pub fn StaticModint(comptime m: comptime_int) type {
         }
 
         pub inline fn sub(self: Self, v: anytype) Self {
-            const x: T = switch (@TypeOf(v)) {
+            const x: T = comptime switch (@TypeOf(v)) {
                 inline Self => v.v,
                 inline else => std.math.comptimeMod(v, m),
             };
@@ -60,7 +60,7 @@ pub fn StaticModint(comptime m: comptime_int) type {
         }
 
         pub inline fn mul(self: Self, v: anytype) Self {
-            const x: U = switch (@TypeOf(v)) {
+            const x: U = comptime switch (@TypeOf(v)) {
                 inline Self => v.v,
                 inline else => std.math.comptimeMod(v, m),
             };
@@ -70,11 +70,28 @@ pub fn StaticModint(comptime m: comptime_int) type {
         }
 
         pub inline fn div(self: Self, v: anytype) Self {
-            const x: U = switch (@TypeOf(v)) {
+            const x: U = comptime switch (@TypeOf(v)) {
                 inline Self => v.inv(),
                 inline else => Self.init(v).inv().v,
             };
             return self.mul(x);
+        }
+
+        pub inline fn addAsg(self: *Self, v: anytype) Self {
+            self = self.add(v);
+            return self;
+        }
+        pub inline fn subAsg(self: *Self, v: anytype) Self {
+            self = self.sub(v);
+            return self;
+        }
+        pub inline fn mulAsg(self: *Self, v: anytype) Self {
+            self = self.mul(v);
+            return self;
+        }
+        pub inline fn divAsg(self: *Self, v: anytype) Self {
+            self = self.div(v);
+            return self;
         }
 
         pub inline fn negate(self: Self) Self {
@@ -110,11 +127,26 @@ pub fn StaticModint(comptime m: comptime_int) type {
 pub const DynamicModint = struct {
     const Self = @This();
 
-    pub fn init() Self {}
-    pub fn setMod(v: anytype) void {
+    v: u32,
+    m: u32,
+    bt: internal.Barrett,
+
+    pub inline fn mod(self: Self) u32 {
+        return self.m;
+    }
+    pub inline fn raw(v: anytype) Self {
+        return Self{ .v = @intCast(v) };
+    }
+    pub inline fn val(self: Self) u32 {
+        return self.v;
+    }
+    pub inline fn as(self: Self, Type: type) Type {
+        return @intCast(self.v);
+    }
+    pub inline fn init(v: anytype) Self {
         _ = v; // autofix
     }
-    pub fn raw(v: anytype) Self {
+    pub fn setMod(v: anytype) void {
         _ = v; // autofix
     }
 };
