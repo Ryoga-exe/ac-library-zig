@@ -78,6 +78,7 @@ test lcpArray {
 pub fn zAlgorithmArbitrary(comptime T: type, allocator: Allocator, s: []const T) Allocator.Error![]usize {
     const n = s.len;
     var z = try allocator.alloc(usize, n);
+    errdefer allocator.free(z);
     if (n == 0) {
         return z;
     }
@@ -116,8 +117,8 @@ test zAlgorithm {
     };
 
     for (tests) |t| {
-        const lcp = try zAlgorithm(allocator, t.str);
-        defer allocator.free(lcp);
-        try std.testing.expectEqualSlices(usize, t.expected, lcp);
+        const z = try zAlgorithm(allocator, t.str);
+        defer allocator.free(z);
+        try std.testing.expectEqualSlices(usize, t.expected, z);
     }
 }
