@@ -82,7 +82,142 @@ fn saDoubling(allocator: Allocator, s: []const i32) Allocator.Error![]usize {
     return sa;
 }
 
-fn saIs() void {}
+const Threshold = struct {
+    native: usize,
+    doubling: usize,
+
+    pub fn default() Threshold {
+        return Threshold{
+            .native = 10,
+            .doubling = 40,
+        };
+    }
+};
+
+fn saIs(comptime threshold: Threshold, allocator: Allocator, s: []const usize, upper: usize) Allocator.Error![]usize {
+    _ = upper; // autofix
+    const n = s.len;
+    switch (n) {
+        0 => return try allocator.alloc(usize, 0),
+        1 => {
+            var result = try allocator.alloc(usize, 1);
+            result[0] = 0;
+            return result;
+        },
+        2 => {
+            var result = try allocator.alloc(usize, 1);
+            if (s[0] < s[1]) {
+                result[0] = 0;
+                result[1] = 1;
+            } else {
+                result[0] = 1;
+                result[1] = 0;
+            }
+            return result;
+        },
+        else => {},
+    }
+    if (n < threshold.native) {
+        return try saNaive(allocator, s);
+    }
+    if (n < threshold.doubling) {
+        return try saDoubling(allocator, s);
+    }
+    const sa = try allocator.alloc(usize, n);
+    const ls = try allocator.alloc(bool, n);
+    @memset(sa, 0);
+    @memset(ls, false);
+    // TODO: impl
+    return sa;
+}
+
+test saNaive {
+    const allocator = std.testing.allocator;
+    const array = [_]i32{ 0, 1, 2, 3, 4 };
+    const sa = try saNaive(allocator, &array);
+    defer allocator.free(sa);
+    try std.testing.expectEqualSlices(usize, &[_]usize{ 0, 1, 2, 3, 4 }, sa);
+}
+
+test saDoubling {
+    const allocator = std.testing.allocator;
+    const array = [_]i32{ 0, 1, 2, 3, 4 };
+    const sa = try saDoubling(allocator, &array);
+    defer allocator.free(sa);
+    try std.testing.expectEqualSlices(usize, &[_]usize{ 0, 1, 2, 3, 4 }, sa);
+}
+
+test "verify all" {
+    const allocator = std.testing.allocator;
+
+    const tests = [_]struct { str: []const u8, expected: []const usize }{
+        .{
+            .str = "abracadabra",
+            .expected = &[_]usize{ 10, 7, 0, 3, 5, 8, 1, 4, 6, 9, 2 },
+        },
+        .{
+            .str = "mmiissiissiippii", // an example taken from https://mametter.hatenablog.com/entry/20180130/p1
+            .expected = &[_]usize{ 15, 14, 10, 6, 2, 11, 7, 3, 1, 0, 13, 12, 9, 5, 8, 4 },
+        },
+    };
+
+    for (tests) |t| {
+        const n = t.str.len;
+        var array = try allocator.alloc(i32, n);
+        defer allocator.free(array);
+        for (0..n) |i| {
+            array[i] = @intCast(t.str[i]);
+        }
+
+        const sa = try saDoubling(allocator, array);
+        defer allocator.free(sa);
+        try std.testing.expectEqualSlices(usize, t.expected, sa);
+
+        const sa_native = try saNaive(allocator, array);
+        defer allocator.free(sa_native);
+        try std.testing.expectEqualSlices(usize, t.expected, sa_native);
+
+        // TODO: test saIs and suffixArray
+    }
+}
+
+pub fn suffixArrayManual(s: []const i32, upper: i32) Allocator.Error![]usize {
+    assert(upper >= 0);
+    for (s) |elem| {
+        assert(0 <= elem and elem <= upper);
+    }
+    // TODO: saIsI32
+}
+
+pub fn suffixArrayArbitrary(comptime T: type, allocator: Allocator, s: []const T) Allocator.Error![]usize {
+    const n = s.len;
+    var idx = try allocator.alloc(usize, n);
+    defer allocator.free(idx);
+    for (0..n) |i| {
+        idx[i] = i;
+    }
+    std.mem.sort(usize, &idx, {}, struct {
+        fn cmp(l: usize, r: usize) bool {
+            s[l] < s[r];
+        }
+    }.cmp);
+    var s2 = try allocator.alloc(usize, n);
+    defer allocator.free(s2);
+    var now = 0;
+    for (0..n) |i| {
+        if (i > 0 and s[idx[i - 1]] != s[idx[i]]) {
+            now += 1;
+        }
+        s2[idx[i]] = now;
+    }
+    // TODO: saIsI32
+}
+
+pub fn suffixArray(allocator: Allocator, s: []const u8) Allocator.Error![]usize {
+    _ = allocator; // autofix
+    _ = s; // autofix
+    // TODO: impl
+}
 
 // Reference:
 // T. Kasai, G. Lee, H. Arimura, S. Arikawa, and K. Park,
@@ -138,6 +273,7 @@ test lcpArray {
 
     for (tests) |t| {
         _ = t; // autofix
+        // TODO: test lcpArray
         // const lcp = try lcpArray(allocator, t.str);
         // defer allocator.free(lcp);
         // try std.testing.expectEqualSlices(usize, t.expected, lcp);
