@@ -92,8 +92,19 @@ const Threshold = struct {
             .doubling = 40,
         };
     }
+
+    pub fn zero() Threshold {
+        return Threshold{
+            .native = 0,
+            .doubling = 0,
+        };
+    }
 };
 
+// SA-IS, linear-time suffix array construction
+// Reference:
+// G. Nong, S. Zhang, and W. H. Chan,
+// Two Efficient Algorithms for Linear Time Suffix Array Construction
 fn saIs(comptime threshold: Threshold, allocator: Allocator, s: []const usize, upper: usize) Allocator.Error![]usize {
     const n = s.len;
     switch (n) {
@@ -124,7 +135,7 @@ fn saIs(comptime threshold: Threshold, allocator: Allocator, s: []const usize, u
     }
     const sa = try allocator.alloc(usize, n);
     errdefer allocator.free(sa);
-    var ls = try allocator.alloc(bool, n);
+    const ls = try allocator.alloc(bool, n);
     defer allocator.free(ls);
     @memset(sa, 0);
     @memset(ls, false);
@@ -132,9 +143,9 @@ fn saIs(comptime threshold: Threshold, allocator: Allocator, s: []const usize, u
         const i = n - 2 - rev;
         ls[i] = if (s[i] == s[i + 1]) ls[i + 1] else s[i] < s[i + 1];
     }
-    var sum_l = try allocator.alloc(usize, upper + 1);
+    const sum_l = try allocator.alloc(usize, upper + 1);
     defer allocator.free(sum_l);
-    var sum_s = try allocator.alloc(usize, upper + 1);
+    const sum_s = try allocator.alloc(usize, upper + 1);
     defer allocator.free(sum_s);
     for (0..n) |i| {
         if (!ls[i]) {
@@ -153,9 +164,46 @@ fn saIs(comptime threshold: Threshold, allocator: Allocator, s: []const usize, u
     // sa's origin is 1.
     const induce = struct {
         // TODO: impl
-        pub fn f() void {}
-    };
-    _ = induce; // autofix
+        pub fn f(lms: []const usize) void {
+            for (sa) |elem| {
+                elem = 0;
+            }
+            const buf = try allocator.alloc(usize, sa.len);
+            defer allocator.free(buf);
+            @memcpy(buf, sum_s);
+            for (lms) |d| {
+                if (d == n) {
+                    continue;
+                }
+                const old = buf[s[d]];
+                buf[s[d]] += 1;
+                sa[old] = d + 1;
+            }
+            @memcpy(buf, sum_l);
+            {
+                const old = buf[s[n - 1]];
+                buf[s[n - 1]] += 1;
+                sa[old] = n;
+            }
+            for (0..n) |i| {
+                const v = sa[i];
+                if (v >= 2 and !ls[v - 2]) {
+                    const old = buf[s[v - 2]];
+                    buf[s[v - 2]] += 1;
+                    sa[old] = v - 1;
+                }
+            }
+            @memcpy(buf, sum_l);
+            for (0..n) |rev| {
+                const i = n - 1 - rev;
+                const v = sa[i];
+                if (v >= 2 and ls[v - 2]) {
+                    buf[s[v - 2] + 1] -= 1;
+                    sa[buf[s[v - 2] + 1]] = v - 1;
+                }
+            }
+        }
+    }.f;
     // origin: 1
     var lms_map = try allocator.alloc(usize, n + 1);
     defer allocator.free(lms_map);
@@ -173,8 +221,8 @@ fn saIs(comptime threshold: Threshold, allocator: Allocator, s: []const usize, u
             try lms.appendAssumeCapacity(i);
         }
     }
-    assert(lms.items.len, m);
-    // TODO: induce(sa, lms);
+    // assert(lms.items.len, m);
+    induce(lms);
 
     if (m > 0) {
         var sorted_lms = try std.ArrayList(usize).initCapacity(allocator, m);
@@ -216,7 +264,8 @@ fn saIs(comptime threshold: Threshold, allocator: Allocator, s: []const usize, u
         for (0..m) |i| {
             sorted_lms[i] = lms[rec_sa[i]];
         }
-        // TODO: induce(sa, sorted_lms);
+
+        induce(sorted_lms);
     }
     for (sa) |elem| {
         elem -= 1;
@@ -270,7 +319,11 @@ test "verify all" {
         defer allocator.free(sa_native);
         try std.testing.expectEqualSlices(usize, t.expected, sa_native);
 
-        // TODO: test saIs and suffixArray
+        const sa_is = try saIs(Threshold.zero(), allocator, array);
+        defer allocator.free(sa_is);
+        try std.testing.expectEqualSlices(usize, t.expected, sa_is);
+
+        // TODO: test suffixArray
     }
 }
 
