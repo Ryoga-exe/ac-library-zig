@@ -95,7 +95,6 @@ const Threshold = struct {
 };
 
 fn saIs(comptime threshold: Threshold, allocator: Allocator, s: []const usize, upper: usize) Allocator.Error![]usize {
-    _ = upper; // autofix
     const n = s.len;
     switch (n) {
         0 => return try allocator.alloc(usize, 0),
@@ -105,7 +104,7 @@ fn saIs(comptime threshold: Threshold, allocator: Allocator, s: []const usize, u
             return result;
         },
         2 => {
-            var result = try allocator.alloc(usize, 1);
+            var result = try allocator.alloc(usize, 2);
             if (s[0] < s[1]) {
                 result[0] = 0;
                 result[1] = 1;
@@ -124,10 +123,104 @@ fn saIs(comptime threshold: Threshold, allocator: Allocator, s: []const usize, u
         return try saDoubling(allocator, s);
     }
     const sa = try allocator.alloc(usize, n);
-    const ls = try allocator.alloc(bool, n);
+    errdefer allocator.free(sa);
+    var ls = try allocator.alloc(bool, n);
+    defer allocator.free(ls);
     @memset(sa, 0);
     @memset(ls, false);
-    // TODO: impl
+    for (0..n - 1) |rev| {
+        const i = n - 2 - rev;
+        ls[i] = if (s[i] == s[i + 1]) ls[i + 1] else s[i] < s[i + 1];
+    }
+    var sum_l = try allocator.alloc(usize, upper + 1);
+    defer allocator.free(sum_l);
+    var sum_s = try allocator.alloc(usize, upper + 1);
+    defer allocator.free(sum_s);
+    for (0..n) |i| {
+        if (!ls[i]) {
+            sum_s[s[i]] += 1;
+        } else {
+            sum_l[s[i] + 1] += 1;
+        }
+    }
+    for (0..upper + 1) |i| {
+        sum_s[i] += sum_l[i];
+        if (i < upper) {
+            sum_l[i + 1] += sum_s[i];
+        }
+    }
+
+    // sa's origin is 1.
+    const induce = struct {
+        // TODO: impl
+        pub fn f() void {}
+    };
+    _ = induce; // autofix
+    // origin: 1
+    var lms_map = try allocator.alloc(usize, n + 1);
+    defer allocator.free(lms_map);
+    var m = 0;
+    for (1..n) |i| {
+        if (!ls[i - 1] and ls[i]) {
+            lms_map[i] = m + 1;
+            m += 1;
+        }
+    }
+    var lms = try std.ArrayList(usize).initCapacity(Allocator, m);
+    defer lms.deinit();
+    for (1..n) |i| {
+        if (!ls[i - 1] and ls[i]) {
+            try lms.appendAssumeCapacity(i);
+        }
+    }
+    assert(lms.items.len, m);
+    // TODO: induce(sa, lms);
+
+    if (m > 0) {
+        var sorted_lms = try std.ArrayList(usize).initCapacity(allocator, m);
+        defer sorted_lms.deinit();
+        for (sa) |v| {
+            if (lms_map[v - 1] != 0) {
+                sorted_lms.appendAssumeCapacity(v - 1);
+            }
+        }
+        var rec_s = allocator.alloc(usize, m);
+        defer allocator.free(rec_s);
+        var rec_upper = 0;
+        rec_s[lms_map[sorted_lms[0] - 1]] = 0;
+        for (1..m) |i| {
+            const l = sorted_lms[i - 1];
+            const r = sorted_lms[i];
+            const end_l = if (lms_map[l] < m) lms[lms_map[l]] else n;
+            const end_r = if (lms_map[r] < m) lms[lms_map[r]] else n;
+            const same = same: {
+                if (end_l - l != end_r - r) {
+                    break :same false;
+                } else {
+                    while (l < end_l) {
+                        if (s[l] != s[r]) {
+                            break;
+                        }
+                    }
+                    l += 1;
+                    r += 1;
+                }
+                break :same l != n and s[l] == s[r];
+            };
+            if (!same) {
+                rec_upper += 1;
+            }
+            rec_s[lms_map[sorted_lms[i]] - 1] = rec_upper;
+        }
+        const rec_sa = saIs(threshold, allocator, rec_s, rec_upper);
+        for (0..m) |i| {
+            sorted_lms[i] = lms[rec_sa[i]];
+        }
+        // TODO: induce(sa, sorted_lms);
+    }
+    for (sa) |elem| {
+        elem -= 1;
+    }
     return sa;
 }
 
