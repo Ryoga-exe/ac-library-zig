@@ -10,31 +10,27 @@ fn saNaive(allocator: Allocator, s: []const i32) Allocator.Error![]usize {
         sa[i] = i;
     }
     const cmp = struct {
-        var closure: struct {
+        const Context = struct {
             n: usize,
             s: []const i32,
-        } = undefined;
-        fn f(_: void, lhs: usize, rhs: usize) bool {
+        };
+        fn f(context: Context, lhs: usize, rhs: usize) bool {
             var l = lhs;
             var r = rhs;
             if (l == r) {
                 return false;
             }
-            while (l < closure.n and r < closure.n) {
-                if (closure.s[l] != closure.s[r]) {
-                    return closure.s[l] < closure.s[r];
+            while (l < context.n and r < context.n) {
+                if (context.s[l] != context.s[r]) {
+                    return context.s[l] < context.s[r];
                 }
                 l += 1;
                 r += 1;
             }
-            return l == closure.n;
+            return l == context.n;
         }
     };
-    cmp.closure = .{
-        .n = n,
-        .s = s,
-    };
-    std.mem.sort(usize, sa, {}, cmp.f);
+    std.mem.sort(usize, sa, cmp.Context{ .n = n, .s = s }, cmp.f);
     return sa;
 }
 
@@ -53,29 +49,29 @@ fn saDoubling(allocator: Allocator, s: []const i32) Allocator.Error![]usize {
     var k: usize = 1;
     while (k < n) : (k *= 2) {
         const cmp = struct {
-            var closure: struct {
+            const Context = struct {
                 n: usize,
                 k: usize,
                 rnk: []i32,
-            } = undefined;
-            fn f(_: void, x: usize, y: usize) bool {
-                if (closure.rnk[x] != closure.rnk[y]) {
-                    return closure.rnk[x] < closure.rnk[y];
+            };
+            fn f(context: Context, x: usize, y: usize) bool {
+                if (context.rnk[x] != context.rnk[y]) {
+                    return context.rnk[x] < context.rnk[y];
                 }
-                const rx = if (x + closure.k < closure.n) closure.rnk[x + closure.k] else -1;
-                const ry = if (y + closure.k < closure.n) closure.rnk[y + closure.k] else -1;
+                const rx = if (x + context.k < context.n) context.rnk[x + context.k] else -1;
+                const ry = if (y + context.k < context.n) context.rnk[y + context.k] else -1;
                 return rx < ry;
             }
         };
-        cmp.closure = .{
+        const context = cmp.Context{
             .n = n,
             .k = k,
             .rnk = rnk,
         };
-        std.mem.sort(usize, sa, {}, cmp.f);
+        std.mem.sort(usize, sa, context, cmp.f);
         tmp[sa[0]] = 0;
         for (1..n) |i| {
-            tmp[sa[i]] = tmp[sa[i - 1]] + (@intFromBool(cmp.f({}, sa[i - 1], sa[i])));
+            tmp[sa[i]] = tmp[sa[i - 1]] + (@intFromBool(cmp.f(context, sa[i - 1], sa[i])));
         }
         @memcpy(rnk, tmp);
     }
@@ -155,7 +151,7 @@ fn saIs(comptime threshold: Threshold, allocator: Allocator, s: []const usize, u
 
     // sa's origin is 1.
     const induce = struct {
-        pub const Closure = struct {
+        pub const Context = struct {
             allocator: Allocator,
             n: usize,
             s: []const usize,
@@ -163,39 +159,39 @@ fn saIs(comptime threshold: Threshold, allocator: Allocator, s: []const usize, u
             sum_s: []const usize,
             sum_l: []const usize,
         };
-        pub fn f(closure: Closure, sav: []usize, lms: []const usize) Allocator.Error!void {
+        pub fn f(context: Context, sav: []usize, lms: []const usize) Allocator.Error!void {
             @memset(sav, 0);
-            var buf = try closure.allocator.dupe(usize, closure.sum_s);
-            defer closure.allocator.free(buf);
+            var buf = try context.allocator.dupe(usize, context.sum_s);
+            defer context.allocator.free(buf);
             for (lms) |d| {
-                if (d == closure.n) {
+                if (d == context.n) {
                     continue;
                 }
-                sav[buf[closure.s[d]]] = d + 1;
-                buf[closure.s[d]] += 1;
+                sav[buf[context.s[d]]] = d + 1;
+                buf[context.s[d]] += 1;
             }
-            @memcpy(buf, closure.sum_l);
-            sav[buf[closure.s[closure.n - 1]]] = closure.n;
-            buf[closure.s[closure.n - 1]] += 1;
-            for (0..closure.n) |i| {
+            @memcpy(buf, context.sum_l);
+            sav[buf[context.s[context.n - 1]]] = context.n;
+            buf[context.s[context.n - 1]] += 1;
+            for (0..context.n) |i| {
                 const v = sav[i];
-                if (v >= 2 and !closure.ls[v - 2]) {
-                    sav[buf[closure.s[v - 2]]] = v - 1;
-                    buf[closure.s[v - 2]] += 1;
+                if (v >= 2 and !context.ls[v - 2]) {
+                    sav[buf[context.s[v - 2]]] = v - 1;
+                    buf[context.s[v - 2]] += 1;
                 }
             }
-            @memcpy(buf, closure.sum_l);
-            for (0..closure.n) |rev| {
-                const i = closure.n - 1 - rev;
+            @memcpy(buf, context.sum_l);
+            for (0..context.n) |rev| {
+                const i = context.n - 1 - rev;
                 const v = sav[i];
-                if (v >= 2 and closure.ls[v - 2]) {
-                    buf[closure.s[v - 2] + 1] -= 1;
-                    sav[buf[closure.s[v - 2] + 1]] = v - 1;
+                if (v >= 2 and context.ls[v - 2]) {
+                    buf[context.s[v - 2] + 1] -= 1;
+                    sav[buf[context.s[v - 2] + 1]] = v - 1;
                 }
             }
         }
     };
-    const closure = induce.Closure{
+    const context = induce.Context{
         .allocator = allocator,
         .n = n,
         .s = s,
@@ -223,7 +219,7 @@ fn saIs(comptime threshold: Threshold, allocator: Allocator, s: []const usize, u
         }
     }
     assert(lms.items.len == m);
-    try induce.f(closure, sa, lms.items);
+    try induce.f(context, sa, lms.items);
 
     if (m > 0) {
         var sorted_lms = try std.ArrayList(usize).initCapacity(allocator, m);
@@ -269,7 +265,7 @@ fn saIs(comptime threshold: Threshold, allocator: Allocator, s: []const usize, u
             sorted_lms.items[i] = lms.items[rec_sa[i]];
         }
 
-        try induce.f(closure, sa, sorted_lms.items);
+        try induce.f(context, sa, sorted_lms.items);
     }
     for (sa) |*elem| {
         elem.* -= 1;
@@ -342,12 +338,12 @@ test "verify all" {
     }
 }
 
-pub fn suffixArrayManual(s: []const i32, upper: i32) Allocator.Error![]usize {
+pub fn suffixArrayManual(allocator: Allocator, s: []const i32, upper: i32) Allocator.Error![]usize {
     assert(upper >= 0);
     for (s) |elem| {
         assert(0 <= elem and elem <= upper);
     }
-    // TODO: saIsI32
+    return saIsI32(Threshold.default(), allocator, s, upper);
 }
 
 pub fn suffixArrayArbitrary(comptime T: type, allocator: Allocator, s: []const T) Allocator.Error![]usize {
@@ -371,13 +367,17 @@ pub fn suffixArrayArbitrary(comptime T: type, allocator: Allocator, s: []const T
         }
         s2[idx[i]] = now;
     }
-    // TODO: saIsI32
+    return saIsI32(Threshold.default(), allocator, s2, now);
 }
 
 pub fn suffixArray(allocator: Allocator, s: []const u8) Allocator.Error![]usize {
-    _ = allocator; // autofix
-    _ = s; // autofix
-    // TODO: impl
+    const n = s.len;
+    const s2 = try allocator.alloc(usize, n);
+    defer allocator.free(s);
+    for (0..n) |i| {
+        s2[i] = @intCast(s[i]);
+    }
+    return saIs(Threshold.default(), allocator, s2, 255);
 }
 
 // Reference:
