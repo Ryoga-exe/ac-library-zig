@@ -9,6 +9,7 @@ pub const powMod = @import("math.zig").powMod;
 pub const invMod = @import("math.zig").invMod;
 pub const crt = @import("math.zig").crt;
 pub const floorSum = @import("math.zig").floorSum;
+pub const MfGraph = @import("maxflow.zig").MfGraph;
 
 comptime {
     std.testing.refAllDecls(@This());
