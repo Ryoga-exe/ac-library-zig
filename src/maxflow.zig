@@ -117,7 +117,6 @@ pub fn MfGraph(comptime Cap: type) type {
             var flowCalc = struct {
                 const Calc = @This();
 
-                allocator: Allocator,
                 graph: *Self,
                 s: usize,
                 t: usize,
@@ -126,11 +125,6 @@ pub fn MfGraph(comptime Cap: type) type {
                 iter: []usize,
                 que: internal.SimpleQueue(usize),
 
-                pub fn deinit(calc: *Calc) void {
-                    calc.allocator.free(calc.level);
-                    calc.allocator.free(calc.iter);
-                    calc.que.deinit();
-                }
                 pub fn bfs(calc: *Calc) Allocator.Error!void {
                     @memset(calc.level, -1);
                     calc.level[calc.s] = 0;
@@ -177,7 +171,6 @@ pub fn MfGraph(comptime Cap: type) type {
                     return res;
                 }
             }{
-                .allocator = self.allocator,
                 .graph = self,
                 .s = s,
                 .t = t,
@@ -186,7 +179,11 @@ pub fn MfGraph(comptime Cap: type) type {
                 .iter = try self.allocator.alloc(usize, n),
                 .que = internal.SimpleQueue(usize).init(self.allocator),
             };
-            defer flowCalc.deinit();
+            defer {
+                self.allocator.free(flowCalc.level);
+                self.allocator.free(flowCalc.iter);
+                flowCalc.que.deinit();
+            }
 
             var result: Cap = 0;
             while (result < flow_limit) {
@@ -338,6 +335,7 @@ test "test_dont_repeat_same_phase" {
     const n = 100_000;
     var graph = try MfGraphI32.init(allocator, 3);
     defer graph.deinit();
+    _ = try graph.addEdge(0, 1, n);
     for (0..n) |_| {
         _ = try graph.addEdge(1, 2, 1);
     }
