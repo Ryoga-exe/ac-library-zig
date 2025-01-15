@@ -10,6 +10,8 @@ pub const invMod = @import("math.zig").invMod;
 pub const crt = @import("math.zig").crt;
 pub const floorSum = @import("math.zig").floorSum;
 
+pub usingnamespace @import("string.zig");
+
 comptime {
     std.testing.refAllDecls(@This());
 }
