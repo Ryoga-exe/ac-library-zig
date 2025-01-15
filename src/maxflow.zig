@@ -3,6 +3,8 @@ const Allocator = std.mem.Allocator;
 const ArrayList = std.ArrayList;
 const assert = std.debug.assert;
 
+const internal = @import("internal_queue.zig");
+
 pub fn MfGraph(comptime Cap: type) type {
     const InternalEdge = struct {
         to: usize,
@@ -111,8 +113,23 @@ pub fn MfGraph(comptime Cap: type) type {
         }
 
         pub fn minCut(self: Self, s: usize) Allocator.Error![]bool {
-            _ = self; // autofix
-            _ = s; // autofix
+            var visited = try self.allocator.alloc(bool, self.n);
+            @memset(visited, false);
+
+            var que = try internal.SimpleQueue(usize).initCapacity(self.allocator, self.n);
+            defer que.deinit();
+            que.pushAssumeCapacity(s);
+
+            for (que.pop()) |p| {
+                visited[p] = true;
+                for (self.g[p].items) |e| {
+                    if (e.cap != 0 and !visited[e.to]) {
+                        visited[e.to] = true;
+                        que.pushAssumeCapacity(e.to);
+                    }
+                }
+                return visited;
+            }
         }
     };
 }
