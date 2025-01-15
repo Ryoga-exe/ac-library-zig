@@ -278,7 +278,6 @@ fn saIs(comptime threshold: Threshold, allocator: Allocator, s: []const usize, u
     return sa;
 }
 
-// TODO: rewrite with meta programming technics
 fn saIsI32(comptime threshold: Threshold, allocator: Allocator, s_i32: []const i32, upper: i32) Allocator.Error![]usize {
     const n = s_i32.len;
     const s = try allocator.alloc(usize, n);
@@ -286,7 +285,7 @@ fn saIsI32(comptime threshold: Threshold, allocator: Allocator, s_i32: []const i
     for (0..n) |i| {
         s[i] = @intCast(s_i32[i]);
     }
-    return try saIs(threshold, allocator, s, @intCast(upper));
+    return saIs(threshold, allocator, s, @intCast(upper));
 }
 
 test saNaive {
@@ -421,7 +420,7 @@ pub fn lcpArrayArbitrary(comptime T: type, allocator: Allocator, s: []const T, s
 }
 
 pub fn lcpArray(allocator: Allocator, s: []const u8, sa: []const usize) Allocator.Error![]usize {
-    return try lcpArrayArbitrary(u8, allocator, s, sa);
+    return lcpArrayArbitrary(u8, allocator, s, sa);
 }
 
 test lcpArray {
@@ -477,7 +476,7 @@ pub fn zAlgorithmArbitrary(comptime T: type, allocator: Allocator, s: []const T)
 }
 
 pub fn zAlgorithm(allocator: Allocator, s: []const u8) Allocator.Error![]usize {
-    return try zAlgorithmArbitrary(u8, allocator, s);
+    return zAlgorithmArbitrary(u8, allocator, s);
 }
 
 test zAlgorithm {
