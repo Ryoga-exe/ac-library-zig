@@ -2,7 +2,7 @@ const std = @import("std");
 const Allocator = std.mem.Allocator;
 const assert = std.debug.assert;
 
-fn saNaive(allocator: Allocator, s: []const i32) Allocator.Error![]usize {
+fn saNaive(comptime T: type, allocator: Allocator, s: []const T) Allocator.Error![]usize {
     const n = s.len;
     var sa = try allocator.alloc(usize, n);
     errdefer allocator.free(sa);
@@ -12,7 +12,7 @@ fn saNaive(allocator: Allocator, s: []const i32) Allocator.Error![]usize {
     const cmp = struct {
         const Context = struct {
             n: usize,
-            s: []const i32,
+            s: []const T,
         };
         fn f(context: Context, lhs: usize, rhs: usize) bool {
             var l = lhs;
@@ -114,10 +114,15 @@ fn saIs(comptime threshold: Threshold, allocator: Allocator, s: []const usize, u
         else => {},
     }
     if (n < threshold.native) {
-        return saNaive(allocator, s);
+        return saNaive(usize, allocator, s);
     }
     if (n < threshold.doubling) {
-        return saDoubling(allocator, s);
+        var s_i32 = try allocator.alloc(i32, n);
+        defer allocator.free(s_i32);
+        for (0..n) |i| {
+            s_i32[i] = @intCast(s[i]);
+        }
+        return saDoubling(allocator, s_i32);
     }
     const sa = try allocator.alloc(usize, n);
     errdefer allocator.free(sa);
@@ -287,7 +292,7 @@ fn saIsI32(comptime threshold: Threshold, allocator: Allocator, s_i32: []const i
 test saNaive {
     const allocator = std.testing.allocator;
     const array = [_]i32{ 0, 1, 2, 3, 4 };
-    const sa = try saNaive(allocator, &array);
+    const sa = try saNaive(i32, allocator, &array);
     defer allocator.free(sa);
     try std.testing.expectEqualSlices(usize, &[_]usize{ 0, 1, 2, 3, 4 }, sa);
 }
@@ -326,7 +331,7 @@ test "verify all" {
         defer allocator.free(sa);
         try std.testing.expectEqualSlices(usize, t.expected, sa);
 
-        const sa_native = try saNaive(allocator, array);
+        const sa_native = try saNaive(i32, allocator, array);
         defer allocator.free(sa_native);
         try std.testing.expectEqualSlices(usize, t.expected, sa_native);
 
@@ -334,7 +339,9 @@ test "verify all" {
         defer allocator.free(sa_is);
         try std.testing.expectEqualSlices(usize, t.expected, sa_is);
 
-        // TODO: test suffixArray
+        const sa_str = try suffixArray(allocator, t.str);
+        defer allocator.free(sa_str);
+        try std.testing.expectEqualSlices(usize, t.expected, sa_str);
     }
 }
 
@@ -373,7 +380,7 @@ pub fn suffixArrayArbitrary(comptime T: type, allocator: Allocator, s: []const T
 pub fn suffixArray(allocator: Allocator, s: []const u8) Allocator.Error![]usize {
     const n = s.len;
     const s2 = try allocator.alloc(usize, n);
-    defer allocator.free(s);
+    defer allocator.free(s2);
     for (0..n) |i| {
         s2[i] = @intCast(s[i]);
     }
@@ -413,13 +420,12 @@ pub fn lcpArrayArbitrary(comptime T: type, allocator: Allocator, s: []const T, s
     return lcp;
 }
 
-pub fn lcpArray(allocator: Allocator, s: []const u8, sa: []const usize) !Allocator.Error![]usize {
+pub fn lcpArray(allocator: Allocator, s: []const u8, sa: []const usize) Allocator.Error![]usize {
     return try lcpArrayArbitrary(u8, allocator, s, sa);
 }
 
 test lcpArray {
     const allocator = std.testing.allocator;
-    _ = allocator; // autofix
 
     const tests = [_]struct { str: []const u8, expected: []const usize }{
         .{
@@ -433,11 +439,13 @@ test lcpArray {
     };
 
     for (tests) |t| {
-        _ = t; // autofix
-        // TODO: test lcpArray
-        // const lcp = try lcpArray(allocator, t.str);
-        // defer allocator.free(lcp);
-        // try std.testing.expectEqualSlices(usize, t.expected, lcp);
+        const sa = try suffixArray(allocator, t.str);
+        defer allocator.free(sa);
+
+        const lcp = try lcpArray(allocator, t.str, sa);
+        defer allocator.free(lcp);
+
+        try std.testing.expectEqualSlices(usize, t.expected, lcp);
     }
 }
 
