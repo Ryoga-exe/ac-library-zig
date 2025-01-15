@@ -130,8 +130,7 @@ pub fn MfGraph(comptime Cap: type) type {
                     calc.level[calc.s] = 0;
                     calc.que.clearAndFree();
                     try calc.que.push(calc.s);
-                    while (!calc.que.empty()) {
-                        const v = calc.que.pop().?;
+                    while (calc.que.pop()) |v| {
                         for (calc.graph.g[v].items) |e| {
                             if (e.cap == 0 or calc.level[e.to] >= 0) {
                                 continue;
