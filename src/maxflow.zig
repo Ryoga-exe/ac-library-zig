@@ -94,22 +94,116 @@ pub fn MfGraph(comptime Cap: type) type {
         }
 
         pub fn changeEdge(self: *Self, i: usize, new_cap: Cap, new_flow: Cap) void {
-            _ = self; // autofix
-            _ = i; // autofix
-            _ = new_cap; // autofix
-            _ = new_flow; // autofix
+            const pos = self.pos.items;
+            const m = pos.len;
+            assert(i < m);
+            assert(0 <= new_flow and new_flow <= new_cap);
+            var e = self.g[pos[i].@"0"].items[self.pos[i].@"1"].*;
+            e.cap = new_cap - new_flow;
+            self.g[e.to].items[e.rev].cap = new_flow;
         }
 
-        pub fn flow(self: *Self, s: usize, t: usize) Cap {
-            self.flowWithCapacity(s, t, std.math.maxInt(Cap));
+        pub fn flow(self: *Self, s: usize, t: usize) Allocator.Error!Cap {
+            return self.flowWithCapacity(s, t, std.math.maxInt(Cap));
         }
 
-        pub fn flowWithCapacity(self: *Self, s: usize, t: usize, flow_limit: Cap) Cap {
+        pub fn flowWithCapacity(self: *Self, s: usize, t: usize, flow_limit: Cap) Allocator.Error!Cap {
             const n = self.n;
             assert(s < n);
             assert(t < n);
             assert(s != t);
             assert(0 <= flow_limit);
+
+            var flowCalc = struct {
+                const Calc = @This();
+
+                allocator: Allocator,
+                graph: *Self,
+                s: usize,
+                t: usize,
+                flow_limit: Cap,
+                level: []i32,
+                iter: []usize,
+                que: internal.SimpleQueue(usize),
+
+                pub fn deinit(calc: *Calc) void {
+                    calc.allocator.free(calc.level);
+                    calc.allocator.free(calc.iter);
+                    calc.que.deinit();
+                }
+                pub fn bfs(calc: *Calc) Allocator.Error!void {
+                    @memset(calc.level, -1);
+                    calc.level[calc.s] = 0;
+                    calc.que.clearAndFree();
+                    try calc.que.push(calc.s);
+                    while (!calc.que.empty()) {
+                        const v = calc.que.pop().?;
+                        for (calc.graph.g[v].items) |e| {
+                            if (e.cap == 0 or calc.level[e.to] >= 0) {
+                                continue;
+                            }
+                            calc.level[e.to] = calc.level[v] + 1;
+                            if (e.to == calc.t) {
+                                return;
+                            }
+                            try calc.que.push(e.to);
+                        }
+                    }
+                }
+                pub fn dfs(calc: *Calc, v: usize, up: Cap) Allocator.Error!Cap {
+                    if (v == calc.s) {
+                        return up;
+                    }
+                    var res: Cap = 0;
+                    const level_v = calc.level[v];
+                    for (calc.iter[v]..calc.graph.g[v].items.len) |i| {
+                        calc.iter[v] = i;
+                        const e = calc.graph.g[v].items[i];
+                        if (level_v <= calc.level[e.to] or calc.graph.g[e.to].items[e.rev].cap == 0) {
+                            continue;
+                        }
+                        const d = try calc.dfs(e.to, @min(up - res, calc.graph.g[e.to].items[e.rev].cap));
+                        if (d <= 0) {
+                            continue;
+                        }
+                        calc.graph.g[v].items[i].cap += d;
+                        calc.graph.g[e.to].items[e.rev].cap -= d;
+                        res += d;
+                        if (res == up) {
+                            return res;
+                        }
+                    }
+                    calc.iter[v] = calc.graph.g[v].items.len;
+                    return res;
+                }
+            }{
+                .allocator = self.allocator,
+                .graph = self,
+                .s = s,
+                .t = t,
+                .flow_limit = flow_limit,
+                .level = try self.allocator.alloc(i32, n),
+                .iter = try self.allocator.alloc(usize, n),
+                .que = internal.SimpleQueue(usize).init(self.allocator),
+            };
+            defer flowCalc.deinit();
+
+            var result: Cap = 0;
+            while (result < flow_limit) {
+                try flowCalc.bfs();
+                if (flowCalc.level[t] == -1) {
+                    break;
+                }
+                @memset(flowCalc.iter, 0);
+                while (result < flow_limit) {
+                    const f = try flowCalc.dfs(t, flow_limit - result);
+                    if (f == 0) {
+                        break;
+                    }
+                    result += f;
+                }
+            }
+            return result;
         }
 
         pub fn minCut(self: Self, s: usize) Allocator.Error![]bool {
@@ -120,7 +214,7 @@ pub fn MfGraph(comptime Cap: type) type {
             defer que.deinit();
             que.pushAssumeCapacity(s);
 
-            for (que.pop()) |p| {
+            while (que.pop()) |p| {
                 visited[p] = true;
                 for (self.g[p].items) |e| {
                     if (e.cap != 0 and !visited[e.to]) {
@@ -128,8 +222,8 @@ pub fn MfGraph(comptime Cap: type) type {
                         que.pushAssumeCapacity(e.to);
                     }
                 }
-                return visited;
             }
+            return visited;
         }
     };
 }
@@ -155,7 +249,7 @@ test "test_max_flow_wikipedia" {
     try expectEqual(6, try graph.addEdge(3, 5, 2));
     try expectEqual(7, try graph.addEdge(4, 5, 3));
 
-    try expectEqual(5, graph.flow(0, 5));
+    try expectEqual(5, try graph.flow(0, 5));
 
     const edges = try graph.edges();
     defer allocator.free(edges);
@@ -199,7 +293,7 @@ test "test_max_flow_wikipedia_multiple_edges" {
         }
     }
 
-    expectEqual(5, graph.flow(0, 5));
+    try expectEqual(5, try graph.flow(0, 5));
 
     const minCut = try graph.minCut(0);
     defer allocator.free(minCut);
@@ -234,7 +328,7 @@ test "test_max_flow_misawa" {
         _ = try graph.addEdge(2 * n + 5 + j, c, 3);
     }
 
-    try expectEqual(2, graph.flow(s, t));
+    try expectEqual(2, try graph.flow(s, t));
 }
 
 test "test_dont_repeat_same_phase" {
@@ -247,5 +341,5 @@ test "test_dont_repeat_same_phase" {
     for (0..n) |_| {
         _ = try graph.addEdge(1, 2, 1);
     }
-    expectEqual(n, graph.flow(0, 2));
+    try expectEqual(n, try graph.flow(0, 2));
 }
