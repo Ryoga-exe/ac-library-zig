@@ -195,7 +195,7 @@ test "test_max_flow_wikipedia_multiple_edges" {
     }) |edge| {
         const u, const v, const c = edge;
         for (0..c) |_| {
-            try graph.addEdge(u, v, 1);
+            _ = try graph.addEdge(u, v, 1);
         }
     }
 
@@ -217,21 +217,21 @@ test "test_max_flow_misawa" {
     defer graph.deinit();
 
     const s, const a, const b, const c, const t = .{ 0, 1, 2, 3, 4 };
-    try graph.addEdge(s, a, 1);
-    try graph.addEdge(s, b, 2);
-    try graph.addEdge(b, a, 2);
-    try graph.addEdge(c, t, 2);
+    _ = try graph.addEdge(s, a, 1);
+    _ = try graph.addEdge(s, b, 2);
+    _ = try graph.addEdge(b, a, 2);
+    _ = try graph.addEdge(c, t, 2);
     for (0..n) |index| {
         const i = 2 * index + 5;
         for (0..2) |j| {
             for (2..4) |k| {
-                try graph.addEdge(i + j, i + k, 3);
+                _ = try graph.addEdge(i + j, i + k, 3);
             }
         }
     }
     for (0..2) |j| {
-        try graph.addEdge(a, 5 + j, 3);
-        try graph.addEdge(2 * n + 5 + j, c, 3);
+        _ = try graph.addEdge(a, 5 + j, 3);
+        _ = try graph.addEdge(2 * n + 5 + j, c, 3);
     }
 
     try expectEqual(2, graph.flow(s, t));
@@ -245,7 +245,7 @@ test "test_dont_repeat_same_phase" {
     var graph = try MfGraphI32.init(allocator, 3);
     defer graph.deinit();
     for (0..n) |_| {
-        try graph.addEdge(1, 2, 1);
+        _ = try graph.addEdge(1, 2, 1);
     }
     expectEqual(n, graph.flow(0, 2));
 }
