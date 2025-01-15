@@ -108,34 +108,24 @@ const Threshold = struct {
 fn saIs(comptime threshold: Threshold, allocator: Allocator, s: []const usize, upper: usize) Allocator.Error![]usize {
     const n = s.len;
     switch (n) {
-        0 => return try allocator.alloc(usize, 0),
+        0 => return allocator.alloc(usize, 0),
         1 => {
             var result = try allocator.alloc(usize, 1);
             result[0] = 0;
             return result;
         },
-        2 => {
-            var result = try allocator.alloc(usize, 2);
-            if (s[0] < s[1]) {
-                result[0] = 0;
-                result[1] = 1;
-            } else {
-                result[0] = 1;
-                result[1] = 0;
-            }
-            return result;
-        },
+        2 => return allocator.dupe(usize, if (s[0] < s[1]) &.{ 0, 1 } else &.{ 1, 0 }),
         else => {},
     }
     if (n < threshold.native) {
-        return try saNaive(allocator, s);
+        return saNaive(allocator, s);
     }
     if (n < threshold.doubling) {
-        return try saDoubling(allocator, s);
+        return saDoubling(allocator, s);
     }
     const sa = try allocator.alloc(usize, n);
     errdefer allocator.free(sa);
-    const ls = try allocator.alloc(bool, n);
+    var ls = try allocator.alloc(bool, n);
     defer allocator.free(ls);
     @memset(sa, 0);
     @memset(ls, false);
@@ -143,9 +133,9 @@ fn saIs(comptime threshold: Threshold, allocator: Allocator, s: []const usize, u
         const i = n - 2 - rev;
         ls[i] = if (s[i] == s[i + 1]) ls[i + 1] else s[i] < s[i + 1];
     }
-    const sum_l = try allocator.alloc(usize, upper + 1);
+    var sum_l = try allocator.alloc(usize, upper + 1);
     defer allocator.free(sum_l);
-    const sum_s = try allocator.alloc(usize, upper + 1);
+    var sum_s = try allocator.alloc(usize, upper + 1);
     defer allocator.free(sum_s);
     @memset(sum_l, 0);
     @memset(sum_s, 0);
@@ -165,42 +155,33 @@ fn saIs(comptime threshold: Threshold, allocator: Allocator, s: []const usize, u
 
     // sa's origin is 1.
     const induce = struct {
-        var closure: struct {
+        pub const Closure = struct {
             allocator: Allocator,
             n: usize,
             s: []const usize,
             ls: []bool,
-            sum_s: []usize,
-            sum_l: []usize,
-        } = undefined;
-        pub fn f(sav: []usize, lms: []const usize) Allocator.Error!void {
-            for (sav) |*elem| {
-                elem.* = 0;
-            }
-            // TODO: @memset(sav, 0);
-            const buf = try closure.allocator.alloc(usize, closure.sum_s.len);
+            sum_s: []const usize,
+            sum_l: []const usize,
+        };
+        pub fn f(closure: Closure, sav: []usize, lms: []const usize) Allocator.Error!void {
+            @memset(sav, 0);
+            var buf = try closure.allocator.dupe(usize, closure.sum_s);
             defer closure.allocator.free(buf);
-            @memcpy(buf, closure.sum_s);
             for (lms) |d| {
                 if (d == closure.n) {
                     continue;
                 }
-                const old = buf[closure.s[d]];
+                sav[buf[closure.s[d]]] = d + 1;
                 buf[closure.s[d]] += 1;
-                sav[old] = d + 1;
             }
             @memcpy(buf, closure.sum_l);
-            {
-                const old = buf[closure.s[closure.n - 1]];
-                buf[closure.s[closure.n - 1]] += 1;
-                sav[old] = closure.n;
-            }
+            sav[buf[closure.s[closure.n - 1]]] = closure.n;
+            buf[closure.s[closure.n - 1]] += 1;
             for (0..closure.n) |i| {
                 const v = sav[i];
                 if (v >= 2 and !closure.ls[v - 2]) {
-                    const old = buf[closure.s[v - 2]];
+                    sav[buf[closure.s[v - 2]]] = v - 1;
                     buf[closure.s[v - 2]] += 1;
-                    sav[old] = v - 1;
                 }
             }
             @memcpy(buf, closure.sum_l);
@@ -214,7 +195,7 @@ fn saIs(comptime threshold: Threshold, allocator: Allocator, s: []const usize, u
             }
         }
     };
-    induce.closure = .{
+    const closure = induce.Closure{
         .allocator = allocator,
         .n = n,
         .s = s,
@@ -242,7 +223,7 @@ fn saIs(comptime threshold: Threshold, allocator: Allocator, s: []const usize, u
         }
     }
     assert(lms.items.len == m);
-    try induce.f(sa, lms.items);
+    try induce.f(closure, sa, lms.items);
 
     if (m > 0) {
         var sorted_lms = try std.ArrayList(usize).initCapacity(allocator, m);
@@ -270,9 +251,9 @@ fn saIs(comptime threshold: Threshold, allocator: Allocator, s: []const usize, u
                         if (s[l] != s[r]) {
                             break;
                         }
+                        l += 1;
+                        r += 1;
                     }
-                    l += 1;
-                    r += 1;
                 }
                 break :same l != n and s[l] == s[r];
             };
@@ -282,11 +263,13 @@ fn saIs(comptime threshold: Threshold, allocator: Allocator, s: []const usize, u
             rec_s[lms_map[sorted_lms.items[i]] - 1] = rec_upper;
         }
         const rec_sa = try saIs(threshold, allocator, rec_s, rec_upper);
+        defer allocator.free(rec_sa);
+
         for (0..m) |i| {
             sorted_lms.items[i] = lms.items[rec_sa[i]];
         }
 
-        try induce.f(sa, sorted_lms.items);
+        try induce.f(closure, sa, sorted_lms.items);
     }
     for (sa) |*elem| {
         elem.* -= 1;
