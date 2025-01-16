@@ -1,11 +1,18 @@
 const std = @import("std");
 const Allocator = std.mem.Allocator;
+const assert = std.debug.assert;
 
 pub fn McfGraph(comptime Cap: type, comptime Cost: type) type {
     return struct {
         const Self = @This();
 
-        pub const Edge = struct {};
+        pub const Edge = struct {
+            from: usize,
+            to: usize,
+            cap: Cap,
+            flow: Cap,
+            cost: Cost,
+        };
 
         allocator: Allocator,
         n: usize,
@@ -22,11 +29,11 @@ pub fn McfGraph(comptime Cap: type, comptime Cost: type) type {
         }
 
         pub fn addEdge(self: *Self, from: usize, to: usize, cap: Cap, cost: Cost) Allocator.Error!usize {
-            _ = self; // autofix
-            _ = from; // autofix
-            _ = to; // autofix
-            _ = cap; // autofix
-            _ = cost; // autofix
+            assert(from < self.n);
+            assert(to < self.n);
+            assert(from != to);
+            assert(0 <= cap);
+            assert(0 <= cost);
             return 0;
         }
 
