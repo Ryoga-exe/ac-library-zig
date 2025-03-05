@@ -1,5 +1,6 @@
 const std = @import("std");
 const Allocator = std.mem.Allocator;
+const ArrayList = std.ArrayList;
 const assert = std.debug.assert;
 
 pub fn McfGraph(comptime Cap: type, comptime Cost: type) type {
@@ -13,13 +14,16 @@ pub fn McfGraph(comptime Cap: type, comptime Cost: type) type {
             flow: Cap,
             cost: Cost,
         };
+        const Graph = ArrayList(Edge);
 
         allocator: Allocator,
+        g: Graph,
         n: usize,
 
         pub fn init(allocator: Allocator, n: usize) Self {
             return Self{
                 .allocator = allocator,
+                .g = Graph.init(allocator),
                 .n = n,
             };
         }
