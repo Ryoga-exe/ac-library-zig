@@ -1,16 +1,16 @@
 const std = @import("std");
-const internal = @import("internal_scc.zig");
+const InternalSccGraph = @import("internal_scc.zig");
 const Groups = @import("internal_groups.zig");
 const Allocator = std.mem.Allocator;
 const assert = std.debug.assert;
 
 const SccGraph = @This();
 
-internal: internal.SccGraph,
+internal: InternalSccGraph,
 
 pub fn init(allocator: Allocator, n: usize) !SccGraph {
     return SccGraph{
-        .internal = internal.SccGraph.init(allocator, n),
+        .internal = InternalSccGraph.init(allocator, n),
     };
 }
 

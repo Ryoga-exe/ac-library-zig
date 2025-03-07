@@ -1,5 +1,5 @@
 const std = @import("std");
-const SccGraph = @import("internal_scc.zig").SccGraph;
+const SccGraph = @import("internal_scc.zig");
 const TwoSat = @This();
 const Allocator = std.mem.Allocator;
 const assert = std.debug.assert;
