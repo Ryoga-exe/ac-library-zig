@@ -9,7 +9,7 @@ pub fn Csr(comptime E: type) type {
         elist: []E,
         allocator: Allocator,
 
-        pub fn init(allocator: Allocator, n: usize, edges: std.ArrayList(std.meta.Tuple(&.{ usize, E })), initialValue: E) !Self {
+        pub fn init(allocator: Allocator, n: usize, edges: std.ArrayList(struct { usize, E }), initialValue: E) !Self {
             const self = Self{
                 .start = try allocator.alloc(usize, n + 1),
                 .elist = try allocator.alloc(E, edges.items.len),

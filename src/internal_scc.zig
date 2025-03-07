@@ -19,13 +19,13 @@ const Env = struct {
 };
 
 n: usize,
-edges: std.ArrayList(std.meta.Tuple(&.{ usize, Edge })),
+edges: std.ArrayList(struct { usize, Edge }),
 allocator: Allocator,
 
 pub fn init(allocator: Allocator, n: usize) SccGraph {
     const self = SccGraph{
         .n = n,
-        .edges = std.ArrayList(std.meta.Tuple(&.{ usize, Edge })).init(allocator),
+        .edges = std.ArrayList(struct { usize, Edge }).init(allocator),
         .allocator = allocator,
     };
     return self;
@@ -39,7 +39,7 @@ pub fn numVertices(self: SccGraph) usize {
 pub fn addEdge(self: *SccGraph, from: usize, to: usize) !void {
     try self.edges.append(.{ from, Edge{ .to = to } });
 }
-pub fn sccIds(self: SccGraph) !std.meta.Tuple(&.{ usize, []usize }) {
+pub fn sccIds(self: SccGraph) !struct { usize, []usize } {
     var env = Env{
         .g = try Csr(Edge).init(self.allocator, self.n, self.edges, Edge{ .to = 0 }),
         .now_ord = 0,

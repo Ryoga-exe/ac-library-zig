@@ -54,7 +54,7 @@ test "SccGraph: Self loop" {
 test "SccGraph: ALPC-G sample" {
     // https://atcoder.jp/contests/practice2/tasks/practice2_g
     const n: usize = 6;
-    const edges = &[_]std.meta.Tuple(&.{ usize, usize }){
+    const edges = &[_]struct { usize, usize }{
         .{ 1, 4 },
         .{ 5, 2 },
         .{ 3, 0 },
