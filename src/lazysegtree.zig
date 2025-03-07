@@ -284,7 +284,7 @@ pub fn LazySegtree(
     };
 }
 
-pub fn LazySegtreeNS(comptime ns: anytype) type {
+pub fn LazySegtreeFromNS(comptime ns: anytype) type {
     return LazySegtree(
         ns.S,
         ns.op,
@@ -299,7 +299,7 @@ pub fn LazySegtreeNS(comptime ns: anytype) type {
 test "LazySegtree works" {
     const allocator = std.testing.allocator;
     var base = [_]i32{ 3, 1, 4, 1, 5, 9, 2, 6, 5, 3 };
-    var segtree = try LazySegtreeNS(tests.max_add).initFromSlice(allocator, &base);
+    var segtree = try LazySegtreeFromNS(tests.max_add).initFromSlice(allocator, &base);
     defer segtree.deinit();
 
     try tests.checkSegtree(&base, &segtree);
@@ -346,7 +346,7 @@ test "LazySegtree: ALPC-L sample" {
         .{ .t = 2, .l = 1, .r = 2, .expect = 1 },
     };
     const allocator = std.testing.allocator;
-    var seg = try LazySegtreeNS(tests.inversion).init(allocator, n);
+    var seg = try LazySegtreeFromNS(tests.inversion).init(allocator, n);
     defer seg.deinit();
 
     for (0..n) |i| {
@@ -423,7 +423,7 @@ const tests = struct {
             return false;
         }
     };
-    fn checkSegtree(base: []const i32, segtree: *LazySegtreeNS(max_add)) !void {
+    fn checkSegtree(base: []const i32, segtree: *LazySegtreeFromNS(max_add)) !void {
         const n = base.len;
         for (0..n) |i| {
             try std.testing.expectEqual(base[i], segtree.get(i));
@@ -484,7 +484,7 @@ const tests = struct {
             }
         }
     }
-    fn check(base: []const i32, segtree: *LazySegtreeNS(max_add), l: usize, r: usize) bool {
+    fn check(base: []const i32, segtree: *LazySegtreeFromNS(max_add), l: usize, r: usize) bool {
         var expected: i32 = max_add.e();
         for (l..r) |i| {
             expected = max_add.op(expected, base[i]);

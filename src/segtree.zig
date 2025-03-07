@@ -165,7 +165,7 @@ pub fn Segtree(comptime S: type, comptime op: fn (S, S) S, comptime e: fn () S) 
     };
 }
 
-pub fn SegtreeNS(comptime ns: anytype) type {
+pub fn SegtreeFromNS(comptime ns: anytype) type {
     return Segtree(
         ns.S,
         ns.op,
@@ -177,7 +177,7 @@ test "Segtree works" {
     const allocator = std.testing.allocator;
     var base = [_]i32{ 3, 1, 4, 1, 5, 9, 2, 6, 5, 3 };
 
-    var segtree = try Segtree(i32, monoid.max(i32).op, monoid.max(i32).e).initFromSlice(allocator, &base);
+    var segtree = try SegtreeFromNS(monoid.max(i32)).initFromSlice(allocator, &base);
     defer segtree.deinit();
     try tests.checkSegtree(&base, &segtree);
 
@@ -206,7 +206,7 @@ test "Segtree: ALPC-J sample" {
         .{ .t = 3, .x = 1, .y = 3, .expect = 6 },
     };
     const allocator = std.testing.allocator;
-    var segtree = try SegtreeNS(monoid.max(usize)).initFromSlice(allocator, a);
+    var segtree = try SegtreeFromNS(monoid.max(usize)).initFromSlice(allocator, a);
     defer segtree.deinit();
 
     try std.testing.expectEqualSlices(usize, &[_]usize{ 1, 2, 3, 2, 1 }, segtree.getSlice());

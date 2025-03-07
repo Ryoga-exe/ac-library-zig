@@ -1,16 +1,16 @@
 const std = @import("std");
-const internal = @import("internal_scc.zig");
+const Internal = @import("internal_scc.zig");
 const Groups = @import("internal_groups.zig");
 const Allocator = std.mem.Allocator;
 const assert = std.debug.assert;
 
 const SccGraph = @This();
 
-internal: internal.SccGraph,
+internal: Internal,
 
 pub fn init(allocator: Allocator, n: usize) !SccGraph {
     return SccGraph{
-        .internal = internal.SccGraph.init(allocator, n),
+        .internal = Internal.init(allocator, n),
     };
 }
 
@@ -54,7 +54,7 @@ test "SccGraph: Self loop" {
 test "SccGraph: ALPC-G sample" {
     // https://atcoder.jp/contests/practice2/tasks/practice2_g
     const n: usize = 6;
-    const edges = &[_]std.meta.Tuple(&.{ usize, usize }){
+    const edges = &[_]struct { usize, usize }{
         .{ 1, 4 },
         .{ 5, 2 },
         .{ 3, 0 },
