@@ -10,7 +10,7 @@ internal: Internal,
 
 pub fn init(allocator: Allocator, n: usize) !SccGraph {
     return SccGraph{
-        .internal = Internal.init(allocator, n),
+        .internal = .init(allocator, n),
     };
 }
 

@@ -33,12 +33,12 @@ pub fn MfGraph(comptime Cap: type) type {
         pub fn init(allocator: Allocator, n: usize) Allocator.Error!Self {
             const g = try allocator.alloc(Graph, n);
             for (g) |*item| {
-                item.* = Graph.init(allocator);
+                item.* = .init(allocator);
             }
             return Self{
                 .allocator = allocator,
                 .n = n,
-                .pos = Position.init(allocator),
+                .pos = .init(allocator),
                 .g = g,
             };
         }
@@ -176,7 +176,7 @@ pub fn MfGraph(comptime Cap: type) type {
                 .flow_limit = flow_limit,
                 .level = try self.allocator.alloc(i32, n),
                 .iter = try self.allocator.alloc(usize, n),
-                .que = internal.SimpleQueue(usize).init(self.allocator),
+                .que = .init(self.allocator),
             };
             defer {
                 self.allocator.free(flowCalc.level);

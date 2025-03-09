@@ -14,7 +14,7 @@ pub fn SimpleQueue(comptime T: type) type {
         pub fn init(allocator: Allocator) Self {
             return Self{
                 .allocator = allocator,
-                .payload = ArrayList.init(allocator),
+                .payload = .init(allocator),
                 .pos = 0,
             };
         }
@@ -22,7 +22,7 @@ pub fn SimpleQueue(comptime T: type) type {
         pub fn initCapacity(allocator: Allocator, n: usize) Allocator.Error!Self {
             return Self{
                 .allocator = allocator,
-                .payload = try ArrayList.initCapacity(allocator, n),
+                .payload = try .initCapacity(allocator, n),
                 .pos = 0,
             };
         }

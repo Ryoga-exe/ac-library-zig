@@ -13,7 +13,7 @@ pub fn init(allocator: Allocator, n: usize) Allocator.Error!TwoSat {
     return TwoSat{
         .allocator = allocator,
         .n = n,
-        .scc = SccGraph.init(allocator, 2 * n),
+        .scc = .init(allocator, 2 * n),
         .answer = try allocator.alloc(bool, n),
     };
 }
