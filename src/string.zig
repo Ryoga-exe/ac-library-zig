@@ -82,19 +82,15 @@ const Threshold = struct {
     native: usize,
     doubling: usize,
 
-    pub fn default() Threshold {
-        return Threshold{
-            .native = 10,
-            .doubling = 40,
-        };
-    }
+    const default = Threshold{
+        .native = 10,
+        .doubling = 40,
+    };
 
-    pub fn zero() Threshold {
-        return Threshold{
-            .native = 0,
-            .doubling = 0,
-        };
-    }
+    const zero = Threshold{
+        .native = 0,
+        .doubling = 0,
+    };
 };
 
 // SA-IS, linear-time suffix array construction
@@ -334,7 +330,7 @@ test "verify all" {
         defer allocator.free(sa_native);
         try std.testing.expectEqualSlices(usize, t.expected, sa_native);
 
-        const sa_is = try saIsI32(Threshold.zero(), allocator, array, 255);
+        const sa_is = try saIsI32(.zero, allocator, array, 255);
         defer allocator.free(sa_is);
         try std.testing.expectEqualSlices(usize, t.expected, sa_is);
 
@@ -349,7 +345,7 @@ pub fn suffixArrayManual(allocator: Allocator, s: []const i32, upper: i32) Alloc
     for (s) |elem| {
         assert(0 <= elem and elem <= upper);
     }
-    return saIsI32(Threshold.default(), allocator, s, upper);
+    return saIsI32(.default, allocator, s, upper);
 }
 
 pub fn suffixArrayArbitrary(comptime T: type, allocator: Allocator, s: []const T) Allocator.Error![]usize {
@@ -373,7 +369,7 @@ pub fn suffixArrayArbitrary(comptime T: type, allocator: Allocator, s: []const T
         }
         s2[idx[i]] = now;
     }
-    return saIsI32(Threshold.default(), allocator, s2, now);
+    return saIsI32(.default, allocator, s2, now);
 }
 
 pub fn suffixArray(allocator: Allocator, s: []const u8) Allocator.Error![]usize {
@@ -383,7 +379,7 @@ pub fn suffixArray(allocator: Allocator, s: []const u8) Allocator.Error![]usize 
     for (0..n) |i| {
         s2[i] = @intCast(s[i]);
     }
-    return saIs(Threshold.default(), allocator, s2, 255);
+    return saIs(.default, allocator, s2, 255);
 }
 
 // Reference:
