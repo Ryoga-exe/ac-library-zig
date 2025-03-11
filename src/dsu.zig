@@ -67,12 +67,12 @@ pub fn groups(self: *Dsu) !Groups {
     var index: usize = 0;
     for (0..self.n) |i| {
         const leader_buf = self.leader(i);
-        if (group_index[leader_buf] == null) {
+        if (group_index[leader_buf]) |leader_index| {
+            group_index[i] = leader_index;
+        } else {
             group_index[leader_buf] = index;
             group_index[i] = index;
             index += 1;
-        } else {
-            group_index[i] = group_index[leader_buf];
         }
     }
     return try Groups.init(self.allocator, index, group_index);

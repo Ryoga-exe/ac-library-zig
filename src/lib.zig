@@ -14,6 +14,6 @@ pub const TwoSat = @import("twosat.zig");
 pub usingnamespace @import("math.zig");
 pub usingnamespace @import("string.zig");
 
-comptime {
+test {
     std.testing.refAllDecls(@This());
 }
