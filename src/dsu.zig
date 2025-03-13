@@ -38,6 +38,9 @@ pub fn deinit(self: *Dsu) void {
 
 /// Performs the Uɴɪᴏɴ operation.
 ///
+/// If $a, b$ are connected, it returns their leader;
+/// if they are disconnected, it returns a new leader.
+///
 /// # Constraints
 ///
 /// - $0 \leq a < n$
