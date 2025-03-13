@@ -38,12 +38,16 @@ pub fn deinit(self: *Dsu) void {
 ///
 /// # Constraints
 ///
-/// * $0 \leq a < n$
-/// * $0 \leq b < n$
+/// - $0 \leq a < n$
+/// - $0 \leq b < n$
+///
+/// # Panics
+///
+/// Panics if the above constraint is not satisfied.
 ///
 /// # Complexity
 ///
-/// * $O(\alpha(n))$ amortized
+/// - $O(\alpha(n))$ amortized
 pub fn merge(self: *Dsu, a: usize, b: usize) usize {
     assert(a < self.n);
     assert(b < self.n);
@@ -64,12 +68,16 @@ pub fn merge(self: *Dsu, a: usize, b: usize) usize {
 ///
 /// # Constraints
 ///
-/// * $0 \leq a < n$
-/// * $0 \leq b < n$
+/// - $0 \leq a < n$
+/// - $0 \leq b < n$
+///
+/// # Panics
+///
+/// Panics if the above constraint is not satisfied.
 ///
 /// # Complexity
 ///
-/// * $O(\alpha(n))$ amortized
+/// - $O(\alpha(n))$ amortized
 pub fn same(self: *Dsu, a: usize, b: usize) bool {
     assert(a < self.n);
     assert(b < self.n);
@@ -80,11 +88,15 @@ pub fn same(self: *Dsu, a: usize, b: usize) bool {
 ///
 /// # Constraints
 ///
-/// * $0 \leq a < n$
+/// - $0 \leq a < n$
+///
+/// # Panics
+///
+/// Panics if the above constraint is not satisfied.
 ///
 /// # Complexity
 ///
-/// * $O(\alpha(n))$ amortized
+/// - $O(\alpha(n))$ amortized
 pub fn leader(self: *Dsu, a: usize) usize {
     assert(a < self.n);
     if (self.parent_or_size[a] < 0) {
@@ -98,11 +110,15 @@ pub fn leader(self: *Dsu, a: usize) usize {
 ///
 /// # Constraints
 ///
-/// * $0 \leq a < n$
+/// - $0 \leq a < n$
+///
+/// # Panics
+///
+/// Panics if the above constraint is not satisfied.
 ///
 /// # Complexity
 ///
-/// * $O(\alpha(n))$ amortized
+/// - $O(\alpha(n))$ amortized
 pub fn size(self: *Dsu, a: usize) usize {
     assert(a < self.n);
     const x = self.leader(a);
