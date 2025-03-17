@@ -1,3 +1,10 @@
+//! A Disjoint set union (DSU) with union by size and path compression.
+//!
+//! See: [Zvi Galil and Giuseppe F. Italiano, Data structures and algorithms for disjoint set union problems](https://core.ac.uk/download/pdf/161439519.pdf)
+//!
+//! Initialize with `init`.
+//! Is owned by the caller and should be freed with `deinit`.
+
 const std = @import("std");
 const Groups = @import("internal_groups.zig");
 const Allocator = std.mem.Allocator;
@@ -5,10 +12,15 @@ const assert = std.debug.assert;
 
 const Dsu = @This();
 
+/// The size of the DSU
 n: usize,
+/// root node: -1 * component size
+/// otherwise: parent
 parent_or_size: []i32,
 allocator: Allocator,
 
+/// Create a DSU instance which will use a specified allocator.
+/// Deinitialize with `deinit`.
 pub fn init(allocator: Allocator, n: usize) !Dsu {
     const self = Dsu{
         .n = n,
@@ -19,10 +31,28 @@ pub fn init(allocator: Allocator, n: usize) !Dsu {
     return self;
 }
 
+/// Release all allocated memory.
 pub fn deinit(self: *Dsu) void {
     self.allocator.free(self.parent_or_size);
 }
 
+/// Performs the Uɴɪᴏɴ operation.
+///
+/// If $a, b$ are connected, it returns their leader;
+/// if they are disconnected, it returns a new leader.
+///
+/// # Constraints
+///
+/// - $0 \leq a < n$
+/// - $0 \leq b < n$
+///
+/// # Panics
+///
+/// Panics if the above constraint is not satisfied.
+///
+/// # Complexity
+///
+/// - $O(\alpha(n))$ amortized
 pub fn merge(self: *Dsu, a: usize, b: usize) usize {
     assert(a < self.n);
     assert(b < self.n);
@@ -39,12 +69,39 @@ pub fn merge(self: *Dsu, a: usize, b: usize) usize {
     return x;
 }
 
+/// Returns whether the vertices $a$ and $b$ are in the same connected component.
+///
+/// # Constraints
+///
+/// - $0 \leq a < n$
+/// - $0 \leq b < n$
+///
+/// # Panics
+///
+/// Panics if the above constraint is not satisfied.
+///
+/// # Complexity
+///
+/// - $O(\alpha(n))$ amortized
 pub fn same(self: *Dsu, a: usize, b: usize) bool {
     assert(a < self.n);
     assert(b < self.n);
     return self.leader(a) == self.leader(b);
 }
 
+/// Performs the Fɪɴᴅ operation.
+///
+/// # Constraints
+///
+/// - $0 \leq a < n$
+///
+/// # Panics
+///
+/// Panics if the above constraint is not satisfied.
+///
+/// # Complexity
+///
+/// - $O(\alpha(n))$ amortized
 pub fn leader(self: *Dsu, a: usize) usize {
     assert(a < self.n);
     if (self.parent_or_size[a] < 0) {
@@ -54,12 +111,33 @@ pub fn leader(self: *Dsu, a: usize) usize {
     return @intCast(self.parent_or_size[a]);
 }
 
+/// Returns the size of the connected component that contains the vertex $a$.
+///
+/// # Constraints
+///
+/// - $0 \leq a < n$
+///
+/// # Panics
+///
+/// Panics if the above constraint is not satisfied.
+///
+/// # Complexity
+///
+/// - $O(\alpha(n))$ amortized
 pub fn size(self: *Dsu, a: usize) usize {
     assert(a < self.n);
     const x = self.leader(a);
     return @intCast(-self.parent_or_size[x]);
 }
 
+/// Divides the graph into connected components.
+/// The result may not be ordered.
+///
+/// Is owned by the caller and should be freed with `Groups.deinit`.
+///
+/// # Complexity
+///
+/// - $O(n)$
 pub fn groups(self: *Dsu) !Groups {
     var group_index = try self.allocator.alloc(?usize, self.n);
     defer self.allocator.free(group_index);
