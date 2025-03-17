@@ -1,5 +1,5 @@
 const std = @import("std");
-const internal = @import("internal_bit.zig");
+const math = std.math;
 const Allocator = std.mem.Allocator;
 const assert = std.debug.assert;
 
@@ -14,7 +14,7 @@ pub fn Segtree(comptime S: type, comptime op: fn (S, S) S, comptime e: fn () S) 
         allocator: Allocator,
 
         pub fn init(allocator: Allocator, n: usize) !Self {
-            const size = internal.bitCeil(n);
+            const size = try math.ceilPowerOfTwo(usize, n);
             const log = @ctz(size);
             const self = Self{
                 .n = n,
@@ -28,7 +28,7 @@ pub fn Segtree(comptime S: type, comptime op: fn (S, S) S, comptime e: fn () S) 
         }
         pub fn initFromSlice(allocator: Allocator, v: []const S) !Self {
             const n = v.len;
-            const size = internal.bitCeil(n);
+            const size = try math.ceilPowerOfTwo(usize, n);
             const log = @ctz(size);
             var self = Self{
                 .n = n,
@@ -251,7 +251,7 @@ const monoid = struct {
                 return @max(x, y);
             }
             fn e() S {
-                return std.math.minInt(S);
+                return math.minInt(S);
             }
         };
     }

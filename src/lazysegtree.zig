@@ -1,6 +1,6 @@
 const std = @import("std");
+const math = std.math;
 const Allocator = std.mem.Allocator;
-const internal = @import("internal_bit.zig");
 const assert = std.debug.assert;
 
 pub fn LazySegtree(
@@ -23,7 +23,7 @@ pub fn LazySegtree(
         allocator: Allocator,
 
         pub fn init(allocator: Allocator, n: usize) !Self {
-            const size = internal.bitCeil(n);
+            const size = try math.ceilPowerOfTwo(usize, n);
             const log = @ctz(size);
             const self = Self{
                 .n = n,
@@ -39,7 +39,7 @@ pub fn LazySegtree(
         }
         pub fn initFromSlice(allocator: Allocator, v: []const S) !Self {
             const n = v.len;
-            const size = internal.bitCeil(n);
+            const size = try math.ceilPowerOfTwo(usize, n);
             const log = @ctz(size);
             var self = Self{
                 .n = n,
@@ -376,7 +376,7 @@ const tests = struct {
             return @max(x, y);
         }
         fn e() S {
-            return std.math.minInt(S);
+            return math.minInt(S);
         }
         fn mapping(f: F, x: S) S {
             return f + x;
