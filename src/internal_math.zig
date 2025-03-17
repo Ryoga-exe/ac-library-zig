@@ -57,6 +57,174 @@ test Barrett {
     try std.testing.expectEqual(@as(u32, 2147483646), b3.mul(1073741824, 2147483645));
 }
 
+// (x ^ n) % m
+pub fn comptimePowMod(x: comptime_int, n: comptime_int, m: comptime_int) comptime_int {
+    if (!(0 <= n and 1 <= m)) {
+        @compileError("Arguments do not satisfy 0 <= n and 1 <= m");
+    }
+    if (m == 1) {
+        return 0;
+    }
+    var _n = n;
+    var r = 1;
+    var y = @mod(x, m);
+    while (_n > 0) : (_n >>= 1) {
+        if (_n & 1 == 1) {
+            r = (r * y) % m;
+        }
+        y = (y * y) % m;
+    }
+    return r;
+}
+
+test comptimePowMod {
+    const i32max = std.math.maxInt(i32);
+    const i64max = std.math.maxInt(i64);
+    const tests = comptime &[_]struct { x: comptime_int, n: comptime_int, m: comptime_int, expects: comptime_int }{
+        .{ .x = 0, .n = 0, .m = 1, .expects = 0 },
+        .{ .x = 0, .n = 0, .m = 3, .expects = 1 },
+        .{ .x = 0, .n = 0, .m = 723, .expects = 1 },
+        .{ .x = 0, .n = 0, .m = 998244353, .expects = 1 },
+        .{ .x = 0, .n = 0, .m = i32max, .expects = 1 },
+
+        .{ .x = 0, .n = 1, .m = 1, .expects = 0 },
+        .{ .x = 0, .n = 1, .m = 3, .expects = 0 },
+        .{ .x = 0, .n = 1, .m = 723, .expects = 0 },
+        .{ .x = 0, .n = 1, .m = 998244353, .expects = 0 },
+        .{ .x = 0, .n = 1, .m = i32max, .expects = 0 },
+
+        .{ .x = 0, .n = i64max, .m = 1, .expects = 0 },
+        .{ .x = 0, .n = i64max, .m = 3, .expects = 0 },
+        .{ .x = 0, .n = i64max, .m = 723, .expects = 0 },
+        .{ .x = 0, .n = i64max, .m = 998244353, .expects = 0 },
+        .{ .x = 0, .n = i64max, .m = i32max, .expects = 0 },
+
+        .{ .x = 1, .n = 0, .m = 1, .expects = 0 },
+        .{ .x = 1, .n = 0, .m = 3, .expects = 1 },
+        .{ .x = 1, .n = 0, .m = 723, .expects = 1 },
+        .{ .x = 1, .n = 0, .m = 998244353, .expects = 1 },
+        .{ .x = 1, .n = 0, .m = i32max, .expects = 1 },
+
+        .{ .x = 1, .n = 1, .m = 1, .expects = 0 },
+        .{ .x = 1, .n = 1, .m = 3, .expects = 1 },
+        .{ .x = 1, .n = 1, .m = 723, .expects = 1 },
+        .{ .x = 1, .n = 1, .m = 998244353, .expects = 1 },
+        .{ .x = 1, .n = 1, .m = i32max, .expects = 1 },
+
+        .{ .x = 1, .n = i64max, .m = 1, .expects = 0 },
+        .{ .x = 1, .n = i64max, .m = 3, .expects = 1 },
+        .{ .x = 1, .n = i64max, .m = 723, .expects = 1 },
+        .{ .x = 1, .n = i64max, .m = 998244353, .expects = 1 },
+        .{ .x = 1, .n = i64max, .m = i32max, .expects = 1 },
+
+        .{ .x = i64max, .n = 0, .m = 1, .expects = 0 },
+        .{ .x = i64max, .n = 0, .m = 3, .expects = 1 },
+        .{ .x = i64max, .n = 0, .m = 723, .expects = 1 },
+        .{ .x = i64max, .n = 0, .m = 998244353, .expects = 1 },
+        .{ .x = i64max, .n = 0, .m = i32max, .expects = 1 },
+
+        .{ .x = i64max, .n = i64max, .m = 1, .expects = 0 },
+        .{ .x = i64max, .n = i64max, .m = 3, .expects = 1 },
+        .{ .x = i64max, .n = i64max, .m = 723, .expects = 640 },
+        .{ .x = i64max, .n = i64max, .m = 998244353, .expects = 683296792 },
+        .{ .x = i64max, .n = i64max, .m = i32max, .expects = 1 },
+
+        .{ .x = 2, .n = 3, .m = 1_000_000_007, .expects = 8 },
+        .{ .x = 5, .n = 7, .m = 1_000_000_007, .expects = 78125 },
+        .{ .x = 123, .n = 456, .m = 1_000_000_007, .expects = 565291922 },
+    };
+    inline for (tests) |t| {
+        try std.testing.expectEqual(t.expects, comptimePowMod(t.x, t.n, t.m));
+    }
+}
+
+// Reference:
+// M. Forisek and J. Jancina,
+// Fast Primality Testing for Integers That Fit into a Machine Word
+pub fn comptimeIsPrime(n: comptime_int) bool {
+    if (n == 2) {
+        return true;
+    } else if (n <= 1 or n % 2 == 0) {
+        return false;
+    }
+    const base = std.math.log2(n);
+    const upper = (1 << base) - 1;
+    const magnitude_bits = if (upper >= n) base else base + 1;
+
+    // Reference:
+    // https://en.wikipedia.org/wiki/Miller%E2%80%93Rabin_primality_test
+    // https://miller-rabin.appspot.com/
+    // https://oeis.org/A014233
+    const seq = switch (magnitude_bits) {
+        0...32 => [_]comptime_int{ 2, 7, 61 },
+        33...64 => [_]comptime_int{ 2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37 },
+        else => @compileError("n is too large"),
+    };
+
+    inline for (seq) |v| {
+        if (n == v) {
+            return true;
+        }
+    }
+
+    const d = comptime blk: {
+        var d = n - 1;
+        while (d % 2 == 0) {
+            d /= 2;
+        }
+        break :blk d;
+    };
+    inline for (seq) |a| {
+        const t, const y = comptime blk: {
+            var t = d;
+            var y = comptimePowMod(a, t, n);
+            while (t != n - 1 and y != 1 and y != n - 1) : (t <<= 1) {
+                y = y * y % n;
+            }
+            break :blk .{ t, y };
+        };
+        if (y != n - 1 and t % 2 == 0) {
+            return false;
+        }
+    }
+    return true;
+}
+
+test comptimeIsPrime {
+    const tests = comptime &[_]struct { x: comptime_int, expects: bool }{
+        .{ .x = 0, .expects = false },
+        .{ .x = 1, .expects = false },
+        .{ .x = 2, .expects = true },
+        .{ .x = 3, .expects = true },
+        .{ .x = 4, .expects = false },
+        .{ .x = 5, .expects = true },
+        .{ .x = 6, .expects = false },
+        .{ .x = 7, .expects = true },
+        .{ .x = 8, .expects = false },
+        .{ .x = 9, .expects = false },
+
+        // .{ .x = 57, .expect = true },
+        .{ .x = 57, .expects = false },
+        .{ .x = 58, .expects = false },
+        .{ .x = 59, .expects = true },
+        .{ .x = 60, .expects = false },
+        .{ .x = 61, .expects = true },
+        .{ .x = 62, .expects = false },
+
+        .{ .x = 701928443, .expects = false },
+        .{ .x = 998244353, .expects = true },
+        .{ .x = 1_000_000_000, .expects = false },
+        .{ .x = 1_000_000_007, .expects = true },
+
+        .{ .x = std.math.maxInt(i32), .expects = true },
+        .{ .x = std.math.maxInt(i62), .expects = true },
+        .{ .x = std.math.maxInt(i64), .expects = false },
+    };
+    inline for (tests) |t| {
+        try std.testing.expectEqual(t.expects, comptimeIsPrime(t.x));
+    }
+}
+
 pub fn invGcd(a: i64, b: i64) struct { i64, i64 } {
     const c = @mod(a, b);
     if (c == 0) {
