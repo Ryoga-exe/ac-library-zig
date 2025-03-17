@@ -1,7 +1,23 @@
+//! Number-theoretic algorithms.
+
 const std = @import("std");
 const internal = @import("internal_math.zig");
 const assert = std.debug.assert;
 
+/// Returns $x^n \bmod m$.
+///
+/// # Constraints
+///
+/// - $0 \leq n$
+/// - $1 \leq m$
+///
+/// # Panics
+///
+/// Panics if the above constraints are not satisfied.
+///
+/// # Complexity
+///
+/// - $O(\log n)$
 pub fn powMod(x: i64, n: i64, m: u32) u32 {
     assert(0 <= n and 1 <= m);
     if (m == 1) {
@@ -60,6 +76,20 @@ test powMod {
     try std.testing.expectEqual(@as(u32, 565291922), powMod(123, 456, 1_000_000_007));
 }
 
+/// Returns an integer $y \in [0, m)$ such that $xy \equiv 1 \pmod m$.
+///
+/// # Constraints
+///
+/// - $\gcd(x, m) = 1$
+/// - $1 \leq m$
+///
+/// # Panics
+///
+/// Panics if the above constraints are not satisfied.
+///
+/// # Complexity
+///
+/// - $O(\log m)$
 pub fn invMod(x: i64, m: i64) i64 {
     assert(1 <= m);
     const z = internal.invGcd(x, m);
@@ -77,6 +107,34 @@ test invMod {
     try std.testing.expectEqual(@as(i64, 1), @mod(invMod(456, 1_000_000_007) * 456, 1_000_000_007));
 }
 
+/// Performs CRT (Chinese Remainder Theorem).
+///
+/// Given two sequences $r, m$ of length $n$, this function solves the modular equation system
+///
+/// \\[
+///   x \equiv r_i \pmod{m_i}, \forall i \in \\{0, 1, \cdots, n - 1\\}
+/// \\]
+///
+/// If there is no solution, it returns $(0, 0)$.
+///
+/// Otherwise, all of the solutions can be written as the form $x \equiv y \pmod z$, using integer $y, z\\ (0 \leq y < z = \text{lcm}(m))$.
+/// It returns this $(y, z)$.
+///
+/// If $n = 0$, it returns $(0, 1)$.
+///
+/// # Constraints
+///
+/// - $|r| = |m|$
+/// - $1 \leq m_{\forall i}$
+/// - $\text{lcm}(m)$ is in `i64`
+///
+/// # Panics
+///
+/// Panics if the above constraints are not satisfied.
+///
+/// # Complexity
+///
+/// - $O(n \log \text{lcm}(m))$
 pub fn crt(r: []const i64, m: []const i64) struct { i64, i64 } {
     assert(r.len == m.len);
 
@@ -160,6 +218,20 @@ test crt {
     }
 }
 
+/// Returns
+///
+/// $$\sum_{i = 0}^{n - 1} \left\lfloor \frac{a \times i + b}{m} \right\rfloor.$$
+///
+/// It returns the answer in $\bmod 2^{\mathrm{64}}$, if overflowed.
+///
+/// # Constraints
+///
+/// - $0 \leq n \lt 2^{32}$
+/// - $1 \leq m \lt 2^{32}$
+///
+/// # Panics
+///
+/// Panics if the above constraints are not satisfied and overflow or division by zero occurred.
 pub fn floorSum(n: i64, m: i64, a: i64, b: i64) i64 {
     var ans: i64 = 0;
     var a_ = a;
