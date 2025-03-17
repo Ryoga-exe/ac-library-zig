@@ -8,10 +8,10 @@ See below for ACL.
 - [AtCoder Library (ACL) - AtCoder](https://atcoder.jp/posts/517)
 - [AtCoder Library - Codeforces](https://codeforces.com/blog/entry/82400)
 
-# API Reference
+## API Reference
 
 Automatically generated API Reference for the project can be found at https://repos.ryoga.dev/ac-library-zig.
 
 > [!NOTE]
-> Note that Zig autodoc is in beta;
+> Zig autodoc is in beta;
 > the website may be broken or incomplete.
