@@ -251,7 +251,7 @@ const monoid = struct {
                 return @max(x, y);
             }
             fn e() S {
-                return std.math.minInt(S);
+                return math.minInt(S);
             }
         };
     }
