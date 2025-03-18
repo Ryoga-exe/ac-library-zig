@@ -148,9 +148,9 @@ pub fn McfGraph(comptime Cap: type, comptime Cost: type) type {
                 var result = ArrayList(CapCostPair).init(self.allocator);
                 try result.append(CapCostPair{ 0, 0 });
                 while (flow_current < flow_limit) {
-                    // if (refineDual()) {
-                    //      break;
-                    // }
+                    if (try self.refineDual(s, t, g, dual_dist, vis, prev_e)) {
+                        break;
+                    }
                     var c = flow_limit - flow_current;
                     var v = t;
                     while (v != s) : (v = g.elist[prev_e[v]].to) {
@@ -197,11 +197,19 @@ pub fn McfGraph(comptime Cap: type, comptime Cost: type) type {
             };
         };
 
-        fn refineDual(self: Self, s: usize, t: usize, dual: []struct { Cost, Cost }, vis: []bool) bool {
+        fn refineDual(
+            self: Self,
+            s: usize,
+            t: usize,
+            g: internal.Csr(InsideEdge),
+            dual: []struct { Cost, Cost },
+            vis: []bool,
+            prev_e: []usize,
+        ) Allocator.Error!bool {
             for (0..self.n) |i| {
                 dual[i].@"1" = std.math.maxInt(Cost);
             }
-            @memset(false, vis);
+            @memset(vis, false);
 
             const Q = struct {
                 const Q = @This();
@@ -219,7 +227,7 @@ pub fn McfGraph(comptime Cap: type, comptime Cost: type) type {
             dual[s].@"1" = 0;
             try que_min.append(s);
             while (que.count() > 0 or que_min.items.len > 0) {
-                const v = que_min.pop() orelse que.remove();
+                const v = que_min.pop() orelse que.remove().to;
                 if (vis[v]) {
                     continue;
                 }
@@ -228,9 +236,35 @@ pub fn McfGraph(comptime Cap: type, comptime Cost: type) type {
                     break;
                 }
                 const dual_v, const dist_v = dual[v];
-                _ = dist_v; // autofix
-                _ = dual_v; // autofix
+                for (g.start[v]..g.start[v + 1]) |i| {
+                    const e = g.elist[i];
+                    if (e.cap == 0) {
+                        continue;
+                    }
+                    const cost = e.cost - dual[e.to].@"0" + dual_v;
+                    if (dual[e.to].@"1" - dist_v > cost) {
+                        const dist_to = dist_v + cost;
+                        dual[e.to].@"1" = dist_to;
+                        prev_e[e.to] = e.rev;
+                        if (dist_to == dist_v) {
+                            try que_min.append(e.to);
+                        } else {
+                            try que.add(Q{ .key = dist_to, .to = e.to });
+                        }
+                    }
+                }
             }
+            if (!vis[t]) {
+                return false;
+            }
+
+            for (0..self.n) |v| {
+                if (!vis[v]) {
+                    continue;
+                }
+                dual[v].@"0" -= dual[t].@"1" - dual[v].@"1";
+            }
+            return true;
         }
     };
 }
