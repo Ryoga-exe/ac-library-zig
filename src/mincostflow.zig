@@ -5,6 +5,16 @@ const internal = @import("internal_csr.zig");
 const math = std.math;
 const assert = std.debug.assert;
 
+/// Solves [Minimum-cost flow problem](https://en.wikipedia.org/wiki/Minimum-cost_flow_problem).
+///
+/// `Cap` and `Cost` are the type of the capacity and the cost, respectively.
+///
+/// Initialize with `init`.
+/// Is owned by the caller and should be freed with `deinit`.
+///
+/// # Constraints
+///
+/// - `Cap` and `Cost` must be signed integers.
 pub fn McfGraph(comptime Cap: type, comptime Cost: type) type {
     // TODO: check Cap and Cost is signed integer
     return struct {
@@ -24,6 +34,16 @@ pub fn McfGraph(comptime Cap: type, comptime Cost: type) type {
         edges: Edges,
         n: usize,
 
+        /// Creates adirected graph with `n` vertices and `0` edges.
+        /// Deinitialize with `deinit`.
+        ///
+        /// # Constraints
+        ///
+        /// - $0 \leq n < 10^8$
+        ///
+        /// # Complexity
+        ///
+        /// - $O(n)$
         pub fn init(allocator: Allocator, n: usize) Self {
             return Self{
                 .allocator = allocator,
@@ -32,10 +52,23 @@ pub fn McfGraph(comptime Cap: type, comptime Cost: type) type {
             };
         }
 
+        /// Release all allocated memory.
         pub fn deinit(self: *Self) void {
             self.edges.deinit();
         }
 
+        /// Adds an edge oriented from `from` to `to` with capacity `cap` and cost `cost`.
+        /// Returns an integer k such that this is the k-th edge that is added.
+        ///
+        /// # Constraints
+        ///
+        /// - $0 \leq$ `from` $< n$
+        /// - $0 \leq$ `to` $< n$
+        /// - $0 \leq$ `cap`, `cost`
+        ///
+        /// # Complexity
+        ///
+        /// - $O(1)$ amortized
         pub fn addEdge(self: *Self, from: usize, to: usize, cap: Cap, cost: Cost) Allocator.Error!usize {
             assert(from < self.n);
             assert(to < self.n);
