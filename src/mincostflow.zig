@@ -1,10 +1,9 @@
 const std = @import("std");
 const Allocator = std.mem.Allocator;
 const ArrayList = std.ArrayList;
+const internal = @import("internal_csr.zig");
+const math = std.math;
 const assert = std.debug.assert;
-const internal = struct {
-    const Csr = @import("internal_csr.zig").Csr;
-};
 
 pub fn McfGraph(comptime Cap: type, comptime Cost: type) type {
     // TODO: check Cap and Cost is signed integer
@@ -65,7 +64,7 @@ pub fn McfGraph(comptime Cap: type, comptime Cost: type) type {
         }
 
         pub fn flow(self: *Self, s: usize, t: usize) Allocator.Error!CapCostPair {
-            return self.flowWithCapacity(s, t, std.math.maxInt(Cap));
+            return self.flowWithCapacity(s, t, math.maxInt(Cap));
         }
 
         pub fn flowWithCapacity(self: *Self, s: usize, t: usize, flow_limit: Cap) Allocator.Error!CapCostPair {
@@ -75,26 +74,28 @@ pub fn McfGraph(comptime Cap: type, comptime Cost: type) type {
         }
 
         pub fn slope(self: *Self, s: usize, t: usize) Allocator.Error![]CapCostPair {
-            return self.slopeWithCapacity(s, t, std.math.maxInt(Cap));
+            return self.slopeWithCapacity(s, t, math.maxInt(Cap));
         }
 
         pub fn slopeWithCapacity(self: *Self, s: usize, t: usize, flow_limit: Cap) Allocator.Error![]CapCostPair {
-            assert(0 <= s and s < self.n);
-            assert(0 <= t and t < self.n);
+            const n = self.n;
+            const allocator = self.allocator;
+            assert(0 <= s and s < n);
+            assert(0 <= t and t < n);
             assert(s != t);
 
             const m = self.edges.items.len;
-            var edge_idx = try self.allocator.alloc(usize, m);
-            defer self.allocator.free(edge_idx);
+            var edge_idx = try allocator.alloc(usize, m);
+            defer allocator.free(edge_idx);
 
             var g = blk: {
-                var degree = try self.allocator.alloc(usize, self.n);
-                defer self.allocator.free(degree);
+                var degree = try allocator.alloc(usize, n);
+                defer allocator.free(degree);
                 @memset(degree, 0);
-                var redge_idx = try self.allocator.alloc(usize, m);
-                defer self.allocator.free(redge_idx);
+                var redge_idx = try allocator.alloc(usize, m);
+                defer allocator.free(redge_idx);
 
-                var elist = try ArrayList(struct { usize, InsideEdge }).initCapacity(self.allocator, 2 * m);
+                var elist = try ArrayList(struct { usize, InsideEdge }).initCapacity(allocator, 2 * m);
                 defer elist.deinit();
                 for (0..m) |i| {
                     const e = self.edges.items[i];
@@ -121,7 +122,7 @@ pub fn McfGraph(comptime Cap: type, comptime Cost: type) type {
                         },
                     });
                 }
-                var g = try internal.Csr(InsideEdge).init(self.allocator, self.n, elist, .zero);
+                var g = try internal.Csr(InsideEdge).init(allocator, n, elist, .zero);
                 for (0..m) |i| {
                     const e = self.edges.items[i];
                     edge_idx[i] += g.start[e.from];
@@ -134,19 +135,19 @@ pub fn McfGraph(comptime Cap: type, comptime Cost: type) type {
             defer g.deinit();
 
             const result = blk: {
-                const dual_dist = try self.allocator.alloc(struct { Cost, Cost }, self.n);
-                defer self.allocator.free(dual_dist);
+                const dual_dist = try allocator.alloc(struct { Cost, Cost }, n);
+                defer allocator.free(dual_dist);
                 @memset(dual_dist, .{ 0, 0 });
-                const prev_e = try self.allocator.alloc(usize, self.n);
-                defer self.allocator.free(prev_e);
+                const prev_e = try allocator.alloc(usize, n);
+                defer allocator.free(prev_e);
                 @memset(prev_e, 0);
-                const vis = try self.allocator.alloc(bool, self.n);
-                defer self.allocator.free(vis);
+                const vis = try allocator.alloc(bool, n);
+                defer allocator.free(vis);
 
                 var flow_current: Cap = 0;
                 var cost_current: Cost = 0;
                 var prev_cost_per_flow: Cost = -1;
-                var result = ArrayList(CapCostPair).init(self.allocator);
+                var result = ArrayList(CapCostPair).init(allocator);
                 try result.append(CapCostPair{ 0, 0 });
                 while (flow_current < flow_limit) {
                     if (!try self.refineDual(s, t, g, dual_dist, vis, prev_e)) {
@@ -207,8 +208,9 @@ pub fn McfGraph(comptime Cap: type, comptime Cost: type) type {
             vis: []bool,
             prev_e: []usize,
         ) Allocator.Error!bool {
+            const allocator = self.allocator;
             for (0..self.n) |i| {
-                dual[i].@"1" = std.math.maxInt(Cost);
+                dual[i].@"1" = math.maxInt(Cost);
             }
             @memset(vis, false);
 
@@ -216,13 +218,13 @@ pub fn McfGraph(comptime Cap: type, comptime Cost: type) type {
                 const Q = @This();
                 key: Cost,
                 to: usize,
-                fn lessThan(_: void, a: Q, b: Q) std.math.Order {
-                    return std.math.order(a.key, b.key);
+                fn lessThan(_: void, a: Q, b: Q) math.Order {
+                    return math.order(a.key, b.key);
                 }
             };
-            var que_min = ArrayList(usize).init(self.allocator);
+            var que_min = ArrayList(usize).init(allocator);
             defer que_min.deinit();
-            var que = std.PriorityQueue(Q, void, Q.lessThan).init(self.allocator, {});
+            var que = std.PriorityQueue(Q, void, Q.lessThan).init(allocator, {});
             defer que.deinit();
 
             dual[s].@"1" = 0;
