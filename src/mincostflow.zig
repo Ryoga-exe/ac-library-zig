@@ -136,9 +136,10 @@ pub fn McfGraph(comptime Cap: type, comptime Cost: type) type {
             const result = blk: {
                 const dual_dist = try self.allocator.alloc(struct { Cost, Cost }, self.n);
                 defer self.allocator.free(dual_dist);
+                @memset(dual_dist, .{ 0, 0 });
                 const prev_e = try self.allocator.alloc(usize, self.n);
                 defer self.allocator.free(prev_e);
-                // @memset(prev_e, 0);
+                @memset(prev_e, 0);
                 const vis = try self.allocator.alloc(bool, self.n);
                 defer self.allocator.free(vis);
 
@@ -148,7 +149,7 @@ pub fn McfGraph(comptime Cap: type, comptime Cost: type) type {
                 var result = ArrayList(CapCostPair).init(self.allocator);
                 try result.append(CapCostPair{ 0, 0 });
                 while (flow_current < flow_limit) {
-                    if (try self.refineDual(s, t, g, dual_dist, vis, prev_e)) {
+                    if (!try self.refineDual(s, t, g, dual_dist, vis, prev_e)) {
                         break;
                     }
                     var c = flow_limit - flow_current;
@@ -162,7 +163,7 @@ pub fn McfGraph(comptime Cap: type, comptime Cost: type) type {
                         const rev = g.elist[prev_e[v]].rev;
                         g.elist[rev].cap -= c;
                     }
-                    const d: Cost = -dual_dist[s].@"0";
+                    const d = -dual_dist[s].@"0";
                     flow_current += c;
                     cost_current += c * d;
                     if (prev_cost_per_flow == d) {
@@ -215,13 +216,13 @@ pub fn McfGraph(comptime Cap: type, comptime Cost: type) type {
                 const Q = @This();
                 key: Cost,
                 to: usize,
-                fn greaterThan(_: void, a: Q, b: Q) std.math.Order {
-                    return std.math.order(a.key, b.key).invert();
+                fn lessThan(_: void, a: Q, b: Q) std.math.Order {
+                    return std.math.order(a.key, b.key);
                 }
             };
             var que_min = ArrayList(usize).init(self.allocator);
             defer que_min.deinit();
-            var que = std.PriorityQueue(Q, void, Q.greaterThan).init(self.allocator, {});
+            var que = std.PriorityQueue(Q, void, Q.lessThan).init(self.allocator, {});
             defer que.deinit();
 
             dual[s].@"1" = 0;
