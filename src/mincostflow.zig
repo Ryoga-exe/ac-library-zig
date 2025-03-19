@@ -16,7 +16,14 @@ const assert = std.debug.assert;
 ///
 /// - `Cap` and `Cost` must be signed integers.
 pub fn McfGraph(comptime Cap: type, comptime Cost: type) type {
-    // TODO: check Cap and Cost is signed integer
+    comptime {
+        if (!isSignedInteger(Cap)) {
+            @compileError("Cap must be a signed integer.");
+        }
+        if (!isSignedInteger(Cost)) {
+            @compileError("Cost must be a signed integer.");
+        }
+    }
     return struct {
         const Self = @This();
 
@@ -302,6 +309,13 @@ pub fn McfGraph(comptime Cap: type, comptime Cost: type) type {
             }
             return true;
         }
+    };
+}
+
+inline fn isSignedInteger(comptime T: type) bool {
+    return comptime switch (@typeInfo(T)) {
+        .int => |info| info.signedness == .signed,
+        else => false,
     };
 }
 
