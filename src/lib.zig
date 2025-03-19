@@ -9,6 +9,7 @@ pub const SegtreeFromNS = @import("segtree.zig").SegtreeFromNS;
 pub const LazySegtree = @import("lazysegtree.zig").LazySegtree;
 pub const LazySegtreeNS = @import("lazysegtree.zig").LazySegtreeFromNS;
 pub const MfGraph = @import("maxflow.zig").MfGraph;
+pub const McfGraph = @import("mincostflow.zig").McfGraph;
 pub const TwoSat = @import("twosat.zig");
 
 pub usingnamespace @import("math.zig");
