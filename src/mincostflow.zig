@@ -1,3 +1,5 @@
+//! Implementation of the [Minimum-cost flow problem](https://en.wikipedia.org/wiki/Minimum-cost_flow_problem) solver.
+
 const std = @import("std");
 const Allocator = std.mem.Allocator;
 const ArrayList = std.ArrayList;
@@ -5,7 +7,11 @@ const internal = @import("internal_csr.zig");
 const math = std.math;
 const assert = std.debug.assert;
 
-/// Solves [Minimum-cost flow problem](https://en.wikipedia.org/wiki/Minimum-cost_flow_problem).
+/// [Minimum-cost flow problem](https://en.wikipedia.org/wiki/Minimum-cost_flow_problem) solver.
+///
+/// `McfGraph` provides a way to model and solve the minimum-cost flow problem.
+/// It supports adding directed edges with capacities and costs, retrieving edges,
+/// and computing optimal flows with various constraints.
 ///
 /// `Cap` and `Cost` are the type of the capacity and the cost, respectively.
 ///
@@ -14,7 +20,7 @@ const assert = std.debug.assert;
 ///
 /// # Constraints
 ///
-/// - `Cap` and `Cost` must be signed integers.
+/// - `Cap` and `Cost` must be signed integer types.
 pub fn McfGraph(comptime Cap: type, comptime Cost: type) type {
     comptime {
         if (!isSignedInteger(Cap)) {
@@ -27,6 +33,10 @@ pub fn McfGraph(comptime Cap: type, comptime Cost: type) type {
     return struct {
         const Self = @This();
 
+        /// Represents an edge in the flow network.
+        ///
+        /// Each edge has a source vertex (`from`), a destination vertex (`to`),
+        /// a maximum capacity (`cap`), the current flow (`flow`), and a cost (`cost`).
         pub const Edge = struct {
             from: usize,
             to: usize,
@@ -38,11 +48,18 @@ pub fn McfGraph(comptime Cap: type, comptime Cost: type) type {
         const CapCostPair = struct { Cap, Cost };
 
         allocator: Allocator,
+
+        /// Stores the list of edges in the graph.
+        ///
+        /// Edges are stored in the order they were added and can be retrieved
+        /// using `getEdge` or `cloneEdges`.
         edges: Edges,
+
+        /// The size of the vertices.
         n: usize,
 
-        /// Creates adirected graph with `n` vertices and `0` edges.
-        /// Deinitialize with `deinit`.
+        /// Creates adirected graph with `n` vertices and no edges.
+        /// Must be deinitialized with `deinit`.
         ///
         /// # Constraints
         ///
@@ -71,7 +88,12 @@ pub fn McfGraph(comptime Cap: type, comptime Cost: type) type {
         ///
         /// - $0 \leq$ `from` $< n$
         /// - $0 \leq$ `to` $< n$
+        /// - `from` $\neq$ `to`
         /// - $0 \leq$ `cap`, `cost`
+        ///
+        /// # Panics
+        ///
+        /// Panics if the above constraint is not satisfied.
         ///
         /// # Complexity
         ///
@@ -93,30 +115,120 @@ pub fn McfGraph(comptime Cap: type, comptime Cost: type) type {
             return m;
         }
 
+        /// Returns the current internal state of the `i`-th edge.
+        /// The edges are ordered in the same order as added by `addEdge`.
+        ///
+        /// # Constraints
+        ///
+        /// - $0 \leq i < m$
+        ///
+        /// /// # Panics
+        ///
+        /// Panics if the above constraint is not satisfied.
         pub fn getEdge(self: Self, i: usize) Edge {
             const m = self.edges.items.len;
             assert(0 <= i and i < m);
             return self.edges.items[i];
         }
 
+        /// Returns cloned of the current internal state of the edges.
+        /// The edges are ordered in the same order as added by `addEdge`.
         pub fn cloneEdges(self: Self) Allocator.Error![]Edges {
             return self.g.clone();
         }
 
+        /// Computes the minimum-cost flow from `s` to `t`.
+        /// It augments the flow from `s` to `t` as much as possible.
+        /// Returns the amount of the flow and the cost.
+        ///
+        /// # Constraints
+        ///
+        /// - $s \neq t$
+        /// - $0 \leq s, t \lt n$
+        /// - You can't call `slope` (also `slopeWithCapacity`) or `flow` (also `flowWithCapacity`) multiple times.
+        /// - The total amount of the flow is in `Cap`.
+        /// - The total cost of the flow is in `Cost`.
+        ///
+        /// # Complexity
+        ///
+        /// - $O(F(n + m) \log (n + m))$, where $F$ is the amout of the flow and $m$ is the number of added edges.
         pub fn flow(self: *Self, s: usize, t: usize) Allocator.Error!CapCostPair {
             return self.flowWithCapacity(s, t, math.maxInt(Cap));
         }
 
+        /// Computes the minimum-cost flow from `s` to `t` with a given flow limit.
+        /// It augments the flow from `s` to `t` as much as possible, until reaching the amount of `flow_limit`.
+        /// Returns the amount of the flow and the cost.
+        ///
+        /// # Constraints
+        ///
+        /// - $s \neq t$
+        /// - $0 \leq s, t \lt n$
+        /// - You can't call `slope` (also `slopeWithCapacity`) or `flow` (also `flowWithCapacity`) multiple times.
+        /// - The total amount of the flow is in `Cap`.
+        /// - The total cost of the flow is in `Cost`.
+        ///
+        /// # Complexity
+        ///
+        /// - $O(F(n + m) \log (n + m))$, where $F$ is the amout of the flow and $m$ is the number of added edges.
         pub fn flowWithCapacity(self: *Self, s: usize, t: usize, flow_limit: Cap) Allocator.Error!CapCostPair {
             const result = try self.slopeWithCapacity(s, t, flow_limit);
             defer self.allocator.free(result);
             return result[result.len - 1];
         }
 
+        /// Computes the slope of cost with respect to flow.
+        /// The caller owns the returned memory, and caller should  free with `allocator.free`.
+        ///
+        /// Let $g$ be a funtion such that $g(x)$ is the cost of the minimum cost `s` to `t` flow
+        /// when the amount of the flow is exactly $x$.
+        /// $g$ is known to be piecewise linear.
+        /// Returns $g$ as the list of the changepoints, that satisfies the followings.
+        ///
+        /// - The first element of the list is $(0, 0)$.
+        /// - Both of `.@"0"` and `.@"1"` are strictly increasing.
+        /// - No three changepoints are on the same line.
+        /// - The last element of the list is $(x, g(x))$, where $x$ is the maximum amount of the $s-t$ flow.
+        ///
+        /// # Constraints
+        ///
+        /// - $s \neq t$
+        /// - $0 \leq s, t \lt n$
+        /// - You can't call `slope` (also `slopeWithCapacity`) or `flow` (also `flowWithCapacity`) multiple times.
+        /// - The total amount of the flow is in `Cap`.
+        /// - The total cost of the flow is in `Cost`.
+        ///
+        /// # Complexity
+        ///
+        /// - $O(F(n + m) \log (n + m))$, where $F$ is the amout of the flow and $m$ is the number of added edges.
         pub fn slope(self: *Self, s: usize, t: usize) Allocator.Error![]CapCostPair {
             return self.slopeWithCapacity(s, t, math.maxInt(Cap));
         }
 
+        /// Computes the slope of cost with respect to flow under a flow limit.
+        /// The caller owns the returned memory, and caller should  free with `allocator.free`.
+        ///
+        /// Let $g$ be a funtion such that $g(x)$ is the cost of the minimum cost `s` to `t` flow
+        /// when the amount of the flow is exactly $x$.
+        /// $g$ is known to be piecewise linear.
+        /// Returns $g$ as the list of the changepoints, that satisfies the followings.
+        ///
+        /// - The first element of the list is $(0, 0)$.
+        /// - Both of `.@"0"` and `.@"1"` are strictly increasing.
+        /// - No three changepoints are on the same line.
+        /// - The last element of the list is $(y, g(y))$, where $y = \min(x, \mathrm{flow\\_limit})$.
+        ///
+        /// # Constraints
+        ///
+        /// - $s \neq t$
+        /// - $0 \leq s, t \lt n$
+        /// - You can't call `slope` (also `slopeWithCapacity`) or `flow` (also `flowWithCapacity`) multiple times.
+        /// - The total amount of the flow is in `Cap`.
+        /// - The total cost of the flow is in `Cost`.
+        ///
+        /// # Complexity
+        ///
+        /// - $O(F(n + m) \log (n + m))$, where $F$ is the amout of the flow and $m$ is the number of added edges.
         pub fn slopeWithCapacity(self: *Self, s: usize, t: usize, flow_limit: Cap) Allocator.Error![]CapCostPair {
             const n = self.n;
             const allocator = self.allocator;
