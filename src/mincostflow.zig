@@ -122,7 +122,7 @@ pub fn McfGraph(comptime Cap: type, comptime Cost: type) type {
         ///
         /// - $0 \leq i < m$
         ///
-        /// /// # Panics
+        /// # Panics
         ///
         /// Panics if the above constraint is not satisfied.
         pub fn getEdge(self: Self, i: usize) Edge {
@@ -149,6 +149,10 @@ pub fn McfGraph(comptime Cap: type, comptime Cost: type) type {
         /// - The total amount of the flow is in `Cap`.
         /// - The total cost of the flow is in `Cost`.
         ///
+        /// # Panics
+        ///
+        /// Panics if the above constraint is not satisfied.
+        ///
         /// # Complexity
         ///
         /// - $O(F(n + m) \log (n + m))$, where $F$ is the amout of the flow and $m$ is the number of added edges.
@@ -167,6 +171,10 @@ pub fn McfGraph(comptime Cap: type, comptime Cost: type) type {
         /// - You can't call `slope` (also `slopeWithCapacity`) or `flow` (also `flowWithCapacity`) multiple times.
         /// - The total amount of the flow is in `Cap`.
         /// - The total cost of the flow is in `Cost`.
+        ///
+        /// # Panics
+        ///
+        /// Panics if the above constraint is not satisfied.
         ///
         /// # Complexity
         ///
@@ -198,6 +206,10 @@ pub fn McfGraph(comptime Cap: type, comptime Cost: type) type {
         /// - The total amount of the flow is in `Cap`.
         /// - The total cost of the flow is in `Cost`.
         ///
+        /// # Panics
+        ///
+        /// Panics if the above constraint is not satisfied.
+        ///
         /// # Complexity
         ///
         /// - $O(F(n + m) \log (n + m))$, where $F$ is the amout of the flow and $m$ is the number of added edges.
@@ -225,6 +237,10 @@ pub fn McfGraph(comptime Cap: type, comptime Cost: type) type {
         /// - You can't call `slope` (also `slopeWithCapacity`) or `flow` (also `flowWithCapacity`) multiple times.
         /// - The total amount of the flow is in `Cap`.
         /// - The total cost of the flow is in `Cost`.
+        ///
+        /// # Panics
+        ///
+        /// Panics if the above constraint is not satisfied.
         ///
         /// # Complexity
         ///
