@@ -1,3 +1,5 @@
+//! String algorithms.
+
 const std = @import("std");
 const Allocator = std.mem.Allocator;
 const assert = std.debug.assert;
@@ -382,6 +384,20 @@ pub fn suffixArray(allocator: Allocator, s: []const u8) Allocator.Error![]usize 
     return saIs(.default, allocator, s2, 255);
 }
 
+/// Given a `T` slice `s` of length `n`, it returns the LCP array of `s`.
+/// Here, the LCP array of `s` is the array of length `n - 1`,
+/// such that the `i`-th element is the length of the LCP (Longest Common Prefix) of `s[sa[i]..n)` and `s[sa[i+1]..n)`.
+///
+/// # Constraints
+///
+/// - `sa` is the suffix array of `s`.
+/// - $1 \leq n \leq 10^8$
+/// - `T` is integer type
+///
+/// # Complexity
+///
+/// - $O(n)$
+///
 // Reference:
 // T. Kasai, G. Lee, H. Arimura, S. Arikawa, and K. Park,
 // Linear-Time Longest-Common-Prefix Computation in Suffix Arrays and Its
@@ -415,6 +431,18 @@ pub fn lcpArrayArbitrary(comptime T: type, allocator: Allocator, s: []const T, s
     return lcp;
 }
 
+/// Given a string `s` of length `n`, it returns the LCP array of `s`.
+/// Here, the LCP array of `s` is the array of length `n - 1`,
+/// such that the `i`-th element is the length of the LCP (Longest Common Prefix) of `s[sa[i]..n)` and `s[sa[i+1]..n)`.
+///
+/// # Constraints
+///
+/// - `sa` is the suffix array of `s`.
+/// - $1 \leq n \leq 10^8$
+///
+/// # Complexity
+///
+/// - $O(n)$
 pub fn lcpArray(allocator: Allocator, s: []const u8, sa: []const usize) Allocator.Error![]usize {
     return lcpArrayArbitrary(u8, allocator, s, sa);
 }
@@ -444,10 +472,22 @@ test lcpArray {
     }
 }
 
+// Computational Biology
+/// Given a `T` slice of length `n`, it returns the slice of length `n`,
+/// such that the `i`-th element is the length of the LCP (Longest Common Prefix) of `s[0..n)` and `s[i..n)`.
+///
+/// # Constraints
+///
+/// - $0 \leq n \leq 10^8$
+/// - `T` is integer type
+///
+/// # Complexity
+///
+/// - $O(n)$
+///
 // Reference:
 // D. Gusfield,
 // Algorithms on Strings, Trees, and Sequences: Computer Science and
-// Computational Biology
 pub fn zAlgorithmArbitrary(comptime T: type, allocator: Allocator, s: []const T) Allocator.Error![]usize {
     const n = s.len;
     var z = try allocator.alloc(usize, n);
@@ -471,6 +511,16 @@ pub fn zAlgorithmArbitrary(comptime T: type, allocator: Allocator, s: []const T)
     return z;
 }
 
+/// Given a string of length `n`, it returns the slice of length `n`,
+/// such that the `i`-th element is the length of the LCP (Longest Common Prefix) of `s[0..n)` and `s[i..n)`.
+///
+/// # Constraints
+///
+/// - $0 \leq n \leq 10^8$
+///
+/// # Complexity
+///
+/// - $O(n)$
 pub fn zAlgorithm(allocator: Allocator, s: []const u8) Allocator.Error![]usize {
     return zAlgorithmArbitrary(u8, allocator, s);
 }
