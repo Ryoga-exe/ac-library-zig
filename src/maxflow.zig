@@ -18,6 +18,10 @@ const internal = @import("internal_queue.zig");
 /// Initialize with `init`.
 /// Is owned by the caller and should be freed with `deinit`.
 ///
+/// Internally, for each edge $e$, it stores the flow amount $f_e$ and the capacity $c_e$.
+/// Let $\mathrm{out}(v)$ and $\mathrm{in}(v)$ be the set of edges starts and ends at $v$, respectively.
+/// For each vertex $v$, let $g(v, f) = \sum_{e \in \mathrm{in}(v)}{f_e} - \sum_{e \in \mathrm{out}(v)}{f_e}$.
+///
 /// # Constraints
 ///
 /// - `Cap` must be signed integer types.
