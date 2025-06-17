@@ -342,6 +342,18 @@ test "verify all" {
     }
 }
 
+/// Given a `i32` slice `s` of length `n`, it returns the suffix array of `s`.
+/// Here, the suffix array `sa` of `s` is a permutation of $0, \cdots, n-1$ such that `s[sa[i]..n) < s[sa[i+1]..n)` holds for all $i = 0,1, \cdots ,n-2$.
+///
+/// # Constraints
+///
+/// - $0 \leq n \leq 10^8$
+/// - $0 \leq \mathrm{upper} \leq 10^8$
+/// - $0 \leq x \leq \mathrm{upper}$ for all elements $x$ of $s$.
+///
+/// # Complexity
+///
+/// - $O(n + \mathrm{upper})$-time
 pub fn suffixArrayManual(allocator: Allocator, s: []const i32, upper: i32) Allocator.Error![]usize {
     assert(upper >= 0);
     for (s) |elem| {
@@ -350,6 +362,17 @@ pub fn suffixArrayManual(allocator: Allocator, s: []const i32, upper: i32) Alloc
     return saIsI32(.default, allocator, s, upper);
 }
 
+/// Given a `T` slice `s` of length `n`, it returns the suffix array of `s`.
+/// Here, the suffix array `sa` of `s` is a permutation of $0, \cdots, n-1$ such that `s[sa[i]..n) < s[sa[i+1]..n)` holds for all $i = 0,1, \cdots ,n-2$.
+///
+/// # Constraints
+///
+/// - $0 \leq n \leq 10^8$
+/// - `T` is integer type
+///
+/// # Complexity
+///
+/// - $O(n \log n)$-time, $O(n)$-space
 pub fn suffixArrayArbitrary(comptime T: type, allocator: Allocator, s: []const T) Allocator.Error![]usize {
     const n = s.len;
     var idx = try allocator.alloc(usize, n);
@@ -374,6 +397,16 @@ pub fn suffixArrayArbitrary(comptime T: type, allocator: Allocator, s: []const T
     return saIsI32(.default, allocator, s2, now);
 }
 
+/// Given a string `s` of length `n`, it returns the suffix array of `s`.
+/// Here, the suffix array `sa` of `s` is a permutation of $0, \cdots, n-1$ such that `s[sa[i]..n) < s[sa[i+1]..n)` holds for all $i = 0,1, \cdots ,n-2$.
+///
+/// # Constraints
+///
+/// - $0 \leq n \leq 10^8$
+///
+/// # Complexity
+///
+/// - $O(n)$-time
 pub fn suffixArray(allocator: Allocator, s: []const u8) Allocator.Error![]usize {
     const n = s.len;
     const s2 = try allocator.alloc(usize, n);
