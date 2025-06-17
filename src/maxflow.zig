@@ -162,8 +162,7 @@ pub fn MfGraph(comptime Cap: type) type {
         }
 
         /// Overwrite the capacity/flow of the `i`-th edge.
-        /// Changes the capacity and the flow amount of the `i`-th edge to
-        /// `new_cap` and `new_flow`, respectively.
+        /// Changes the capacity and the flow amount of the `i`-th edge to `new_cap` and `new_flow`, respectively.
         /// It doesn't change the capacity or the flow amount of other edges.
         ///
         /// # Constraints
@@ -189,13 +188,66 @@ pub fn MfGraph(comptime Cap: type) type {
         }
 
         /// Augments the flow from `s` to `t` as much as possible.
-        /// It returns the amount of the flow augmented.
+        /// Returns the amount of the flow augmented.
+        ///
+        /// It changes the flow amount of each edge.
+        /// Let $f_e$ and $f_e'$ be the flow amount of edge $e$ before and after calling it, respectively.
+        /// Precisely, it changes the flow amount as follows.
+        ///
+        /// - $0 \leq f_e' \leq c_e$
+        /// - $g(v, f) = g(v, f')$ holds for all vertices $v$ other than $s$ and $t$.
+        /// - $g(t, f') - g(t, f)$ is maximized under these conditions. It returns this $g(t, f') - g(t, f)$.
+        ///
+        /// # Constraints
+        ///
+        /// - $s \neq t$
+        /// - $0 \leq s, t \lt n$
+        /// - The answer should be in `Cap`.
+        ///
+        /// # Panics
+        ///
+        /// Panics if the above constraint is not satisfied.
+        ///
+        /// # Complexity
+        ///
+        /// - $O((n + m) \sqrt{m})$ (if all the capacities are $1$),
+        /// - $O(n^2 m)$ (general), or
+        /// - $O(F(n + m))$, where $F$ is the returned value
+        ///
+        /// where $m$ is the number of added edges.
         pub fn flow(self: *Self, s: usize, t: usize) Allocator.Error!Cap {
             return self.flowWithCapacity(s, t, std.math.maxInt(Cap));
         }
 
         /// Auguments the flow from `s` to `t` as much as possible, until reaching the amount of `flow_limit`.
-        /// It returns the amount of the flow augmented.
+        /// Returns the amount of the flow augmented.
+        ///
+        /// It changes the flow amount of each edge.
+        /// Let $f_e$ and $f_e'$ be the flow amount of edge $e$ before and after calling it, respectively.
+        /// Precisely, it changes the flow amount as follows.
+        ///
+        /// - $0 \leq f_e' \leq c_e$
+        /// - $g(v, f) = g(v, f')$ holds for all vertices $v$ other than $s$ and $t$.
+        /// - $g(t, f') - g(t, f) \leq$ `flow_limit`
+        /// - $g(t, f') - g(t, f)$ is maximized under these conditions. It returns this $g(t, f') - g(t, f)$.
+        ///
+        /// # Constraints
+        ///
+        /// - $s \neq t$
+        /// - $0 \leq s, t \lt n$
+        /// - The answer should be in `Cap`.
+        ///
+        /// # Panics
+        ///
+        /// Panics if the above constraint is not satisfied.
+        ///
+        /// # Complexity
+        ///
+        /// - $O((n + m) \sqrt{m})$ (if all the capacities are $1$),
+        /// - $O(n^2 m)$ (general), or
+        /// - $O(F(n + m))$, where $F$ is the returned value
+        ///
+        /// where $m$ is the number of added edges.
         pub fn flowWithCapacity(self: *Self, s: usize, t: usize, flow_limit: Cap) Allocator.Error!Cap {
             const n = self.n;
             assert(s < n);
@@ -291,6 +343,17 @@ pub fn MfGraph(comptime Cap: type) type {
             return result;
         }
 
+        /// Returns a boolean slice of length `n`, such that the `i`-th element is `true`
+        /// if and only if there is a directed path from `s` to `i` in the residual network.
+        /// The returned slice corresponds to a s-t minimum cut after calling `flow(s, t)` exactly once.
+        ///
+        /// The residual network is the graph whose edge set is given by gathering $(u, v)$
+        /// for each edge $e = (u, v, f_e, c_e)$ with $f_e < c_e$ and $(v, u)$ for each edge $e$ with $0 < f_e$.
+        /// Returns the set of the vertices that is reachable from `s` in the residual network.
+        ///
+        /// # Complexity
+        ///
+        /// - $O(n + m)$, where $m$ is the number of added edges.
         pub fn minCut(self: Self, s: usize) Allocator.Error![]bool {
             var visited = try self.allocator.alloc(bool, self.n);
             @memset(visited, false);
