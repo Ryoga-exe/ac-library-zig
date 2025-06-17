@@ -1,14 +1,36 @@
+//! A 2-SAT Solver.
+//!
+//! For variables $x_0, x_1, \ldots, x_{N - 1}$ and clauses with from
+//!
+//! \\[
+//!   (x_i = f) \lor (x_j = g)
+//! \\]
+//!
+//! it decides whether there is a truth assignment that satisfies all clauses.
+//!
+//! Initialize with `init`.
+//! Is owned by the caller and should be freed with `deinit`.
+
 const std = @import("std");
 const SccGraph = @import("internal_scc.zig");
-const TwoSat = @This();
 const Allocator = std.mem.Allocator;
 const assert = std.debug.assert;
 
+const TwoSat = @This();
+
 allocator: Allocator,
+/// Number of variables
 n: usize,
 scc: SccGraph,
+/// A truth assignment that satisfies all clauses **of the last call of `satisfiable`**.
 answer: []bool,
 
+/// Create a new `TwoSat` of `n` variables and 0 clauses.
+/// Deinitialize with `deinit`.
+///
+/// # Complexity
+///
+/// - $O(n)$
 pub fn init(allocator: Allocator, n: usize) Allocator.Error!TwoSat {
     return TwoSat{
         .allocator = allocator,
@@ -18,17 +40,37 @@ pub fn init(allocator: Allocator, n: usize) Allocator.Error!TwoSat {
     };
 }
 
+/// Release all allocated memory.
 pub fn deinit(self: *TwoSat) void {
     self.scc.deinit();
     self.allocator.free(self.answer);
 }
 
+/// Adds a clause $(x_i = f) \lor (x_j = g)$.
+///
+/// # Constraints
+///
+/// - $0 \leq i < n$
+/// - $0 \leq j < n$
+///
+/// # Panics
+///
+/// Panics if the above constraints are not satisfied.
+///
+/// # Complexity
+///
+/// - $O(1)$ amortized
 pub fn addClause(self: *TwoSat, i: usize, f: bool, j: usize, g: bool) Allocator.Error!void {
     assert(i < self.n and j < self.n);
     try self.scc.addEdge(2 * i + @intFromBool(!f), 2 * j + @intFromBool(g));
     try self.scc.addEdge(2 * j + @intFromBool(!g), 2 * i + @intFromBool(f));
 }
 
+/// Returns whether there is a truth assignment that satisfies all clauses.
+///
+/// # Complexity
+///
+/// - $O(n + m)$ where $m$ is the number of added clauses
 pub fn satisfiable(self: *TwoSat) Allocator.Error!bool {
     const id = (try self.scc.sccIds()).@"1";
     defer self.allocator.free(id);
