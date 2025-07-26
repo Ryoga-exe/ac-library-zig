@@ -41,11 +41,11 @@ pub fn FenwickTree(comptime T: type, comptime op: fn (T, T) T, comptime e: T) ty
             self.allocator.free(self.data);
         }
 
-        /// Processes `a[p] += x` (`a[p] = op(a[p], x)`).
+        /// Processes `a[idx] += x` (`a[idx] = op(a[idx], x)`).
         ///
         /// # Constraints
         ///
-        /// - $0 \leq p < n$
+        /// - $0 \leq idx < n$
         ///
         /// # Panics
         ///
