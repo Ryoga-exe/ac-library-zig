@@ -3,16 +3,41 @@ const math = std.math;
 const Allocator = std.mem.Allocator;
 const assert = std.debug.assert;
 
+/// Segment Tree
+/// Reference: https://en.wikipedia.org/wiki/Segment_tree
+///
+/// This is a wrapper around a tree of element type T, update operation op, and identity e.
+/// The following should be defined.
+///
+/// - The type `S` of the monoid
+/// - The binary operation `op: fn (S, S) S`
+/// - The identity element `e: fn () S`
+///
+/// Initialize with `init`.
 pub fn Segtree(comptime S: type, comptime op: fn (S, S) S, comptime e: fn () S) type {
     return struct {
         const Self = @This();
 
+        /// original array length
         n: usize,
+        /// internal tree size (power of two ≥ n)
         size: usize,
+        /// tree height used by `set`
         log: usize,
+        /// backing array: [size...2*size)
         d: []S,
         allocator: Allocator,
 
+        /// Creates an empty tree of length `n`, initialised with the identity.
+        /// Deinitialize with `deinit`.
+        ///
+        /// # Constraints
+        ///
+        /// - $0 \leq n < 10^8$
+        ///
+        /// # Complexity
+        ///
+        /// - $O(n)$
         pub fn init(allocator: Allocator, n: usize) !Self {
             const size = try math.ceilPowerOfTwo(usize, n);
             const log = @ctz(size);
@@ -26,6 +51,17 @@ pub fn Segtree(comptime S: type, comptime op: fn (S, S) S, comptime e: fn () S) 
             @memset(self.d, e());
             return self;
         }
+
+        /// Build a tree from an existing slice.
+        /// Deinitialize with `deinit`.
+        ///
+        /// # Constraints
+        ///
+        /// - $0 \leq `v.len` < 10^8$
+        ///
+        /// # Complexity
+        ///
+        /// - $O(n)$ (where $n$ is the length of `v`)
         pub fn initFromSlice(allocator: Allocator, v: []const S) !Self {
             const n = v.len;
             const size = try math.ceilPowerOfTwo(usize, n);
@@ -47,9 +83,25 @@ pub fn Segtree(comptime S: type, comptime op: fn (S, S) S, comptime e: fn () S) 
             }
             return self;
         }
+
+        /// Release all allocated memory.
         pub fn deinit(self: *Self) void {
             self.allocator.free(self.d);
         }
+
+        /// Assigns `x` to `a[pos]`
+        ///
+        /// # Constraints
+        ///
+        /// - $0 \leq p < n$
+        ///
+        /// # Panics
+        ///
+        /// Panics if the above constraints are not satisfied.
+        ///
+        /// # Complexity
+        ///
+        /// - $O(\log n)$
         pub fn set(self: *Self, pos: usize, x: S) void {
             assert(pos < self.n);
             const p = pos + self.size;
@@ -58,13 +110,48 @@ pub fn Segtree(comptime S: type, comptime op: fn (S, S) S, comptime e: fn () S) 
                 self.update(p >> @intCast(i));
             }
         }
+
+        /// Returns `a[p]`
+        ///
+        /// # Constraints
+        ///
+        /// - $0 \leq p < n$
+        ///
+        /// # Panics
+        ///
+        /// Panics if the above constraints are not satisfied.
+        ///
+        /// # Complexity
+        ///
+        /// - $O(1)$
         pub fn get(self: *Self, p: usize) S {
             assert(p < self.n);
             return self.d[p + self.size];
         }
+
+        /// Returns the underlying leaf slice `[0, n)`.
+        ///
+        /// # Complexity
+        ///
+        /// - $O(1)$
         pub fn getSlice(self: *Self) []S {
             return self.d[self.size .. self.size + self.n];
         }
+
+        /// Returns op(a[l], ..., a[r - 1]), assuming the properties of the monoid.
+        /// Returns e() if l = r.
+        ///
+        /// # Constraints
+        ///
+        /// - $0 \leq l \leq r < n$
+        ///
+        /// # Panics
+        ///
+        /// Panics if the above constraints are not satisfied.
+        ///
+        /// # Complexity
+        ///
+        /// - $O(\log n)$
         pub fn prod(self: *Self, left: usize, right: usize) S {
             assert(left <= right and right <= self.n);
 
@@ -90,9 +177,38 @@ pub fn Segtree(comptime S: type, comptime op: fn (S, S) S, comptime e: fn () S) 
 
             return op(sml, smr);
         }
+
+        /// Returns op(a[0], ..., a[n - 1]), assuming the properties of the monoid.
+        /// Returns e() if n = 0.
+        ///
+        /// # Complexity
+        ///
+        /// - $O(1)$
         pub fn allProd(self: *Self) S {
             return self.d[1];
         }
+
+        /// Applies binary search on the segment tree.
+        /// Returns an index `r` that satisfies both of the following.
+        ///
+        /// - `r = l` or `f(context, op(a[l], a[l + 1], ..., a[r - 1])) = true`
+        /// - `r = n` or `f(context, op(a[l], a[l + 1], ..., a[r])) = false`
+        ///
+        /// If `f` is monotone, this is the maximum `r` that satisfies `f(context, op(a[l], a[l + 1], ..., a[r - 1])) = true`.
+        ///
+        /// # Constraints
+        ///
+        /// - if `f` is called with the same argument, it returns the same value, i.e., `f/ has no side effect.
+        /// - `f(context, e()) = true`
+        /// - $0 \leq l \leq n$
+        ///
+        /// # Panics
+        ///
+        /// Panics if the above constraints are not satisfied.
+        ///
+        /// # Complexity
+        ///
+        /// - $O(\log n)$
         pub fn maxRight(self: *Self, left: usize, context: anytype, comptime f: fn (@TypeOf(context), S) bool) usize {
             assert(left <= self.n);
             assert(f(context, e()));
@@ -126,6 +242,28 @@ pub fn Segtree(comptime S: type, comptime op: fn (S, S) S, comptime e: fn () S) 
             }
             return self.n;
         }
+
+        /// Applies binary search on the segment tree.
+        /// Returns an index `l` that satisfies both of the following.
+        ///
+        /// - `l = r` or `f(context, op(a[l], a[l + 1], ..., a[r - 1])) = true`
+        /// - `l = 0` or `f(context, op(a[l - 1], a[l], ..., a[r - 1])) = false`
+        ///
+        /// If `f` is monotone, this is the minimum `l` that satisfies `f(context, op(a[l], a[l + 1], ..., a[r - 1])) = true`.
+        ///
+        /// # Constraints
+        ///
+        /// - if `f` is called with the same argument, it returns the same value, i.e., `f` has no side effect.
+        /// - `f(context, e()) = true`
+        /// - $0 \leq r \leq n$
+        ///
+        /// # Panics
+        ///
+        /// Panics if the above constraints are not satisfied.
+        ///
+        /// # Complexity
+        ///
+        /// - $O(\log n)$
         pub fn minLeft(self: *Self, right: usize, context: anytype, comptime f: fn (@TypeOf(context), S) bool) usize {
             assert(right <= self.n);
             assert(f(context, e()));
@@ -159,12 +297,18 @@ pub fn Segtree(comptime S: type, comptime op: fn (S, S) S, comptime e: fn () S) 
             }
             return 0;
         }
+
+        /// Internal helper function:
+        /// Recomputes node `k` from its two children.
         fn update(self: *Self, k: usize) void {
             self.d[k] = op(self.d[2 * k], self.d[2 * k + 1]);
         }
     };
 }
 
+/// Sugar helper that turns a *namespace* with fields `S`, `op`, and `e`.
+///
+/// Initialize with `init`.
 pub fn SegtreeFromNS(comptime ns: anytype) type {
     return Segtree(
         ns.S,
