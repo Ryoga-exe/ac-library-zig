@@ -190,9 +190,9 @@ pub fn LazySegtree(
                 }
             }
         }
-        pub fn maxRight(self: *Self, left: usize, comptime g: fn (S) bool) usize {
+        pub fn maxRight(self: *Self, left: usize, context: anytype, comptime g: fn (@TypeOf(context), S) bool) usize {
             assert(left <= self.n);
-            assert(g(e()));
+            assert(g(context, e()));
 
             if (left == self.n) {
                 return self.n;
@@ -207,12 +207,12 @@ pub fn LazySegtree(
                 while (l % 2 == 0) {
                     l >>= 1;
                 }
-                if (!g(op(sm, self.d[l]))) {
+                if (!g(context, op(sm, self.d[l]))) {
                     while (l < self.size) {
                         self.push(l);
                         l *= 2;
                         const res = op(sm, self.d[l]);
-                        if (g(res)) {
+                        if (g(context, res)) {
                             sm = res;
                             l += 1;
                         }
@@ -228,9 +228,9 @@ pub fn LazySegtree(
             }
             return self.n;
         }
-        pub fn minLeft(self: *Self, right: usize, comptime g: fn (S) bool) usize {
+        pub fn minLeft(self: *Self, right: usize, context: anytype, comptime g: fn (@TypeOf(context), S) bool) usize {
             assert(right <= self.n);
-            assert(g(e()));
+            assert(g(context, e()));
 
             if (right == 0) {
                 return 0;
@@ -246,12 +246,12 @@ pub fn LazySegtree(
                 while (r > 1 and r % 2 != 0) {
                     r >>= 1;
                 }
-                if (!g(op(self.d[r], sm))) {
+                if (!g(context, op(self.d[r], sm))) {
                     while (r < self.size) {
                         self.push(r);
                         r = 2 * r + 1;
                         const res = op(self.d[r], sm);
-                        if (g(res)) {
+                        if (g(context, res)) {
                             sm = res;
                             r -= 1;
                         }
@@ -443,28 +443,26 @@ const tests = struct {
             break :expected acc;
         }, segtree.allProd());
 
-        const f_base = struct {
-            var k: max_add.S = 0;
-            pub fn f(x: max_add.S) bool {
+        const f = struct {
+            pub fn f(k: max_add.S, x: max_add.S) bool {
                 return x < k;
             }
-        };
+        }.f;
         for (0..10) |k| {
-            f_base.k = @intCast(k);
-            const f = f_base.f;
+            const target: max_add.S = @intCast(k);
             for (0..n + 1) |l| {
                 try std.testing.expectEqual(
                     expected: {
                         var acc = max_add.e();
                         for (l..n) |pos| {
                             acc = max_add.op(acc, base[pos]);
-                            if (!f(acc)) {
+                            if (!f(target, acc)) {
                                 break :expected pos;
                             }
                         }
                         break :expected n;
                     },
-                    segtree.maxRight(l, f),
+                    segtree.maxRight(l, target, f),
                 );
             }
             for (0..n + 1) |r| {
@@ -473,13 +471,13 @@ const tests = struct {
                         var acc = max_add.e();
                         for (0..r) |pos| {
                             acc = max_add.op(acc, base[r - pos - 1]);
-                            if (!f(acc)) {
+                            if (!f(target, acc)) {
                                 break :expected r - pos;
                             }
                         }
                         break :expected 0;
                     },
-                    segtree.minLeft(r, f),
+                    segtree.minLeft(r, target, f),
                 );
             }
         }
