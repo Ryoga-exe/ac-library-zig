@@ -5,9 +5,9 @@ const assert = std.debug.assert;
 /// Fenwick Tree (Binary‑Indexed Tree)
 /// Reference: https://en.wikipedia.org/wiki/Fenwick_tree
 ///
-/// This is a wrapper around a tree of element type T, identity e, and update operation op.
+/// This is a wrapper around a tree of element type T, update operation op, and identity e.
 /// Initialize with `init`.
-pub fn FenwickTree(comptime T: type, comptime e: T, comptime op: fn (T, T) T) type {
+pub fn FenwickTree(comptime T: type, comptime op: fn (T, T) T, comptime e: T) type {
     return struct {
         const Self = @This();
         /// logical length of the array
@@ -15,7 +15,7 @@ pub fn FenwickTree(comptime T: type, comptime e: T, comptime op: fn (T, T) T) ty
         /// internal 1‑based tree representation
         data: []T,
         allocator: Allocator,
-        
+
         /// Creates an empty tree of length `n`, initialised with the identity.
         /// Deinitialize with `deinit`.
         ///
@@ -95,10 +95,10 @@ pub fn FenwickTree(comptime T: type, comptime e: T, comptime op: fn (T, T) T) ty
 }
 
 /// Convenient helper for i64 FenwickTree.
-pub const FenwickTreeI64 = FenwickTree(i64, 0, operation(i64).addition);
+pub const FenwickTreeI64 = FenwickTree(i64, operation(i64).addition, 0);
 
 /// Convenient helper for i32 FenwickTree.
-pub const FenwickTreeI32 = FenwickTree(i32, 0, operation(i32).addition);
+pub const FenwickTreeI32 = FenwickTree(i32, operation(i32).addition, 0);
 
 fn operation(comptime T: type) type {
     return struct {
