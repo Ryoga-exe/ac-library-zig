@@ -143,7 +143,7 @@ pub fn Segtree(comptime S: type, comptime op: fn (S, S) S, comptime e: fn () S) 
         ///
         /// # Constraints
         ///
-        /// - $0 \leq l \leq r < n$
+        /// - $0 \leq l \leq r \leq n$
         ///
         /// # Panics
         ///
