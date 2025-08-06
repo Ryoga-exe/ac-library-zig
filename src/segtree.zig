@@ -6,7 +6,7 @@ const assert = std.debug.assert;
 /// Segment Tree
 /// Reference: https://en.wikipedia.org/wiki/Segment_tree
 ///
-/// This is a wrapper around a tree of element type T, update operation op, and identity e.
+/// This is a wrapper around a tree of element type S, update operation op, and identity e.
 /// The following should be defined.
 ///
 /// - The type `S` of the monoid
