@@ -3,6 +3,22 @@ const math = std.math;
 const Allocator = std.mem.Allocator;
 const assert = std.debug.assert;
 
+/// Lazy Segment Tree
+///
+/// This is a wrapper around a tree of element type S, update operation op, identity e,
+/// mapping type F, mapping function, composition function, and identity id.
+///
+/// The following should be defined.
+///
+/// - The type `S` of the monoid
+/// - The binary operation `op: fn (S, S) S`
+/// - The identity element `e: fn () S`
+/// - The type `F` of the map
+/// - The function `mapping: fn (F, S) S` that returns $f(x)$
+/// - The function `composition: fn (F, F) F` that returns $f \circ g$
+/// - The function `id: fn () F` that returns `\mathrm{id}`
+///
+/// Initialize with `init`.
 pub fn LazySegtree(
     comptime S: type,
     comptime op: fn (S, S) S,
@@ -15,13 +31,28 @@ pub fn LazySegtree(
     return struct {
         const Self = @This();
 
+        /// original array length
         n: usize,
+        /// internal tree size (power of two ≥ n)
         size: usize,
+        /// tree height
         log: usize,
+        /// node values
         d: []S,
+        /// lazy tags
         lz: []F,
         allocator: Allocator,
 
+        /// Creates an empty tree of length `n`, initialised with the identity.
+        /// Deinitialize with `deinit`.
+        ///
+        /// # Constraints
+        ///
+        /// - $0 \leq n < 10^8$
+        ///
+        /// # Complexity
+        ///
+        /// - $O(n)$
         pub fn init(allocator: Allocator, n: usize) !Self {
             const size = try math.ceilPowerOfTwo(usize, n);
             const log = @ctz(size);
@@ -37,6 +68,17 @@ pub fn LazySegtree(
             @memset(self.lz, id());
             return self;
         }
+
+        /// Build a tree from an existing slice.
+        /// Deinitialize with `deinit`.
+        ///
+        /// # Constraints
+        ///
+        /// - $0 \leq `v.len` < 10^8$
+        ///
+        /// # Complexity
+        ///
+        /// - $O(n)$ (where $n$ is the length of `v`)
         pub fn initFromSlice(allocator: Allocator, v: []const S) !Self {
             const n = v.len;
             const size = try math.ceilPowerOfTwo(usize, n);
@@ -60,10 +102,26 @@ pub fn LazySegtree(
             }
             return self;
         }
+
+        /// Release all allocated memory.
         pub fn deinit(self: *Self) void {
             self.allocator.free(self.d);
             self.allocator.free(self.lz);
         }
+
+        /// Assigns `x` to `a[pos]`
+        ///
+        /// # Constraints
+        ///
+        /// - $0 \leq p < n$
+        ///
+        /// # Panics
+        ///
+        /// Panics if the above constraints are not satisfied.
+        ///
+        /// # Complexity
+        ///
+        /// - $O(\log n)$
         pub fn set(self: *Self, pos: usize, x: S) void {
             assert(pos < self.n);
             const p = pos + self.size;
@@ -77,6 +135,20 @@ pub fn LazySegtree(
                 self.update(p >> i);
             }
         }
+
+        /// Returns `a[p]`
+        ///
+        /// # Constraints
+        ///
+        /// - $0 \leq p < n$
+        ///
+        /// # Panics
+        ///
+        /// Panics if the above constraints are not satisfied.
+        ///
+        /// # Complexity
+        ///
+        /// - $O(\log n)$
         pub fn get(self: *Self, pos: usize) S {
             assert(pos < self.n);
             const p = pos + self.size;
@@ -86,9 +158,25 @@ pub fn LazySegtree(
             }
             return self.d[p];
         }
+
         // pub fn getSlice(self: *Self) []S {
         //     _ = self;
         // }
+
+        /// Returns op(a[l], ..., a[r - 1]), assuming the properties of the monoid.
+        /// Returns e() if l = r.
+        ///
+        /// # Constraints
+        ///
+        /// - $0 \leq l \leq r \leq n$
+        ///
+        /// # Panics
+        ///
+        /// Panics if the above constraints are not satisfied.
+        ///
+        /// # Complexity
+        ///
+        /// - $O(\log n)$
         pub fn prod(self: *Self, left: usize, right: usize) S {
             assert(left <= right and right <= self.n);
             if (left == right) {
@@ -125,9 +213,30 @@ pub fn LazySegtree(
 
             return op(sml, smr);
         }
+
+        /// Returns op(a[0], ..., a[n - 1]), assuming the properties of the monoid.
+        /// Returns e() if n = 0.
+        ///
+        /// # Complexity
+        ///
+        /// - $O(1)$
         pub fn allProd(self: Self) S {
             return self.d[1];
         }
+
+        /// Applies `a[pos] = f(a[p])`.
+        ///
+        /// # Constraints
+        ///
+        /// - $0 \leq p < n$
+        ///
+        /// # Panics
+        ///
+        /// Panics if the above constraints are not satisfied.
+        ///
+        /// # Complexity
+        ///
+        /// - $O(\log n)$
         pub fn apply(self: *Self, pos: usize, f: F) void {
             assert(pos < self.n);
             const p = pos + self.size;
@@ -141,6 +250,20 @@ pub fn LazySegtree(
                 self.update(p >> i);
             }
         }
+
+        /// Applies `a[i] = f(a[i])` for all `i = l..r-1`.
+        ///
+        /// # Constraints
+        ///
+        /// - $0 \leq l \leq r \leq n$
+        ///
+        /// # Panics
+        ///
+        /// Panics if the above constraints are not satisfied.
+        ///
+        /// # Complexity
+        ///
+        /// - $O(\log n)$
         pub fn applyRange(self: *Self, left: usize, right: usize, f: F) void {
             assert(left <= right and right <= self.n);
             if (left == right) {
@@ -190,6 +313,28 @@ pub fn LazySegtree(
                 }
             }
         }
+
+        /// Applies binary search on the segment tree.
+        /// Returns an index `r` that satisfies both of the following
+        ///
+        /// - `r = l` or `g(context, op(a[l], a[l + 1], ..., a[r - 1])) = true`
+        /// - `r = n` or `g(context, op(a[l], a[l + 1], ..., a[r])) = false`
+        ///
+        /// If `g` is monotone, this is the maximum `r` that satisfies `g(context, op(a[l], a[l + 1], ..., a[r - 1])) = true`.
+        ///
+        /// # Constraints
+        ///
+        /// - if `g` is called with the same argument, it returns the same value, i.e., `g` has no side effect.
+        /// - `g(context, e()) = true`
+        /// - $0 \leq l \leq n$
+        ///
+        /// # Panics
+        ///
+        /// Panics if the above constraints are not satisfied.
+        ///
+        /// # Complexity
+        ///
+        /// - $O(\log n)$
         pub fn maxRight(self: *Self, left: usize, context: anytype, comptime g: fn (@TypeOf(context), S) bool) usize {
             assert(left <= self.n);
             assert(g(context, e()));
@@ -228,6 +373,28 @@ pub fn LazySegtree(
             }
             return self.n;
         }
+
+        /// Applies binary search on the segment tree.
+        /// Returns an index `l` that satisfies both of the following.
+        ///
+        /// - `l = r` or `g(context, op(a[l], a[l + 1], ..., a[r - 1])) = true`
+        /// - `l = 0` or `g(context, op(a[l - 1], a[l], ..., a[r - 1])) = false`
+        ///
+        /// If `g` is monotone, this is the minimum `l` that satisfies `g(context, op(a[l], a[l + 1], ..., a[r - 1])) = true`.
+        ///
+        /// # Constraints
+        ///
+        /// - if `g` is called with the same argument, it returns the same value, i.e., `g` has no side effect.
+        /// - `g(context, e()) = true`
+        /// - $0 \leq r \leq n$
+        ///
+        /// # Panics
+        ///
+        /// Panics if the above constraints are not satisfied.
+        ///
+        /// # Complexity
+        ///
+        /// - $O(\log n)$
         pub fn minLeft(self: *Self, right: usize, context: anytype, comptime g: fn (@TypeOf(context), S) bool) usize {
             assert(right <= self.n);
             assert(g(context, e()));
@@ -284,6 +451,9 @@ pub fn LazySegtree(
     };
 }
 
+/// Sugar helper that turns a *namespace* with fields `S`, `op`, `e`, `F`, `mapping`, `composition`, and `id`.
+///
+/// Initialize with `init`.
 pub fn LazySegtreeFromNS(comptime ns: anytype) type {
     return LazySegtree(
         ns.S,
