@@ -198,7 +198,7 @@ pub fn Segtree(comptime S: type, comptime op: fn (S, S) S, comptime e: fn () S) 
         ///
         /// # Constraints
         ///
-        /// - if `f` is called with the same argument, it returns the same value, i.e., `f/ has no side effect.
+        /// - if `f` is called with the same argument, it returns the same value, i.e., `f` has no side effect.
         /// - `f(context, e()) = true`
         /// - $0 \leq l \leq n$
         ///
