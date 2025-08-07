@@ -1,3 +1,5 @@
+//! Implementation of the [Maximum flow problem](https://en.wikipedia.org/wiki/Maximum_flow_problem) solver.
+
 const std = @import("std");
 const Allocator = std.mem.Allocator;
 const ArrayList = std.ArrayList;
@@ -5,6 +7,24 @@ const assert = std.debug.assert;
 
 const internal = @import("internal_queue.zig");
 
+/// Dinic-based [Maximum flow problem](https://en.wikipedia.org/wiki/Maximum_flow_problem) solver.
+///
+/// `MfGraph` models a directed network with capacities on the edges and
+/// efficiently computes **maximum flow** as well as a corresponding
+/// **minimum s-t cut**.
+///
+/// `Cap` is the type of the capacity.
+///
+/// Initialize with `init`.
+/// Is owned by the caller and should be freed with `deinit`.
+///
+/// Internally, for each edge $e$, it stores the flow amount $f_e$ and the capacity $c_e$.
+/// Let $\mathrm{out}(v)$ and $\mathrm{in}(v)$ be the set of edges starts and ends at $v$, respectively.
+/// For each vertex $v$, let $g(v, f) = \sum_{e \in \mathrm{in}(v)}{f_e} - \sum_{e \in \mathrm{out}(v)}{f_e}$.
+///
+/// # Constraints
+///
+/// - `Cap` must be signed integer types.
 pub fn MfGraph(comptime Cap: type) type {
     const InternalEdge = struct {
         to: usize,
@@ -18,6 +38,10 @@ pub fn MfGraph(comptime Cap: type) type {
     return struct {
         const Self = @This();
 
+        /// Represents a (forward) edge in the residual network.
+        ///
+        /// Each edge has a source vertex (`from`), a destination vertex (`to`),
+        /// a original capacity (`cap`), the current flow (`flow`).
         pub const Edge = struct {
             from: usize,
             to: usize,
@@ -26,10 +50,26 @@ pub fn MfGraph(comptime Cap: type) type {
         };
 
         allocator: Allocator,
+
+        /// The size of the vertices.
         n: usize,
+
+        /// Positions of forward edges
         pos: Position,
+
+        /// Residual graph
         g: []Graph,
 
+        /// Creates adirected graph with `n` vertices and no edges.
+        /// Must be deinitialized with `deinit`.
+        ///
+        /// # Constraints
+        ///
+        /// - $0 \leq n < 10^8$
+        ///
+        /// # Complexity
+        ///
+        /// - $O(n)$
         pub fn init(allocator: Allocator, n: usize) Allocator.Error!Self {
             const g = try allocator.alloc(Graph, n);
             for (g) |*item| {
@@ -43,6 +83,7 @@ pub fn MfGraph(comptime Cap: type) type {
             };
         }
 
+        /// Release all allocated memory.
         pub fn deinit(self: Self) void {
             self.pos.deinit();
             for (self.g) |item| {
@@ -51,6 +92,23 @@ pub fn MfGraph(comptime Cap: type) type {
             self.allocator.free(self.g);
         }
 
+        /// Adds an edge oriented from `from` to `to` with capacity `cap`.
+        /// Returns an integer k such that this is the k-th edge that is added.
+        ///
+        /// # Constraints
+        ///
+        /// - $0 \leq$ `from` $< n$
+        /// - $0 \leq$ `to` $< n$
+        /// - `from` $\neq$ `to`
+        /// - $0 \leq$ `cap`
+        ///
+        /// # Panics
+        ///
+        /// Panics if the above constraint is not satisfied.
+        ///
+        /// # Complexity
+        ///
+        /// - $O(1)$ amortized
         pub fn addEdge(self: *Self, from: usize, to: usize, cap: Cap) Allocator.Error!usize {
             assert(from < self.n);
             assert(to < self.n);
@@ -68,6 +126,16 @@ pub fn MfGraph(comptime Cap: type) type {
             return m;
         }
 
+        /// Returns the current internal state of the `i`-th edge.
+        /// The edges are ordered in the same order as added by `addEdge`.
+        ///
+        /// # Constraints
+        ///
+        /// - $0 \leq i < m$
+        ///
+        /// # Panics
+        ///
+        /// Panics if the above constraint is not satisfied.
         pub fn getEdge(self: Self, i: usize) Edge {
             const g = self.g;
             const pos = self.pos.items;
@@ -84,6 +152,10 @@ pub fn MfGraph(comptime Cap: type) type {
             };
         }
 
+        /// Returns cloned of the current internal state of the edges.
+        /// The edges are ordered in the same order as added by `addEdge`.
+        ///
+        /// The caller owns the returned memory, and caller should  free with `allocator.free`.
         pub fn edges(self: Self) Allocator.Error![]Edge {
             const m = self.pos.items.len;
             var result = try self.allocator.alloc(Edge, m);
@@ -93,6 +165,22 @@ pub fn MfGraph(comptime Cap: type) type {
             return result;
         }
 
+        /// Overwrite the capacity/flow of the `i`-th edge.
+        /// Changes the capacity and the flow amount of the `i`-th edge to `new_cap` and `new_flow`, respectively.
+        /// It doesn't change the capacity or the flow amount of other edges.
+        ///
+        /// # Constraints
+        ///
+        /// - $0 \leq i < m$
+        /// - $0 \leq$ `new_flow` $\leq$ `new_cap`
+        ///
+        /// # Panics
+        ///
+        /// Panics if the above constraint is not satisfied.
+        ///
+        /// # Complexity
+        ///
+        /// - $O(1)$
         pub fn changeEdge(self: *Self, i: usize, new_cap: Cap, new_flow: Cap) void {
             const pos = self.pos.items;
             const m = pos.len;
@@ -103,10 +191,67 @@ pub fn MfGraph(comptime Cap: type) type {
             self.g[e.to].items[e.rev].cap = new_flow;
         }
 
+        /// Augments the flow from `s` to `t` as much as possible.
+        /// Returns the amount of the flow augmented.
+        ///
+        /// It changes the flow amount of each edge.
+        /// Let $f_e$ and $f_e'$ be the flow amount of edge $e$ before and after calling it, respectively.
+        /// Precisely, it changes the flow amount as follows.
+        ///
+        /// - $0 \leq f_e' \leq c_e$
+        /// - $g(v, f) = g(v, f')$ holds for all vertices $v$ other than $s$ and $t$.
+        /// - $g(t, f') - g(t, f)$ is maximized under these conditions. It returns this $g(t, f') - g(t, f)$.
+        ///
+        /// # Constraints
+        ///
+        /// - $s \neq t$
+        /// - $0 \leq s, t \lt n$
+        /// - The answer should be in `Cap`.
+        ///
+        /// # Panics
+        ///
+        /// Panics if the above constraint is not satisfied.
+        ///
+        /// # Complexity
+        ///
+        /// - $O((n + m) \sqrt{m})$ (if all the capacities are $1$),
+        /// - $O(n^2 m)$ (general), or
+        /// - $O(F(n + m))$, where $F$ is the returned value
+        ///
+        /// where $m$ is the number of added edges.
         pub fn flow(self: *Self, s: usize, t: usize) Allocator.Error!Cap {
             return self.flowWithCapacity(s, t, std.math.maxInt(Cap));
         }
 
+        /// Auguments the flow from `s` to `t` as much as possible, until reaching the amount of `flow_limit`.
+        /// Returns the amount of the flow augmented.
+        ///
+        /// It changes the flow amount of each edge.
+        /// Let $f_e$ and $f_e'$ be the flow amount of edge $e$ before and after calling it, respectively.
+        /// Precisely, it changes the flow amount as follows.
+        ///
+        /// - $0 \leq f_e' \leq c_e$
+        /// - $g(v, f) = g(v, f')$ holds for all vertices $v$ other than $s$ and $t$.
+        /// - $g(t, f') - g(t, f) \leq$ `flow_limit`
+        /// - $g(t, f') - g(t, f)$ is maximized under these conditions. It returns this $g(t, f') - g(t, f)$.
+        ///
+        /// # Constraints
+        ///
+        /// - $s \neq t$
+        /// - $0 \leq s, t \lt n$
+        /// - The answer should be in `Cap`.
+        ///
+        /// # Panics
+        ///
+        /// Panics if the above constraint is not satisfied.
+        ///
+        /// # Complexity
+        ///
+        /// - $O((n + m) \sqrt{m})$ (if all the capacities are $1$),
+        /// - $O(n^2 m)$ (general), or
+        /// - $O(F(n + m))$, where $F$ is the returned value
+        ///
+        /// where $m$ is the number of added edges.
         pub fn flowWithCapacity(self: *Self, s: usize, t: usize, flow_limit: Cap) Allocator.Error!Cap {
             const n = self.n;
             assert(s < n);
@@ -202,6 +347,17 @@ pub fn MfGraph(comptime Cap: type) type {
             return result;
         }
 
+        /// Returns a boolean slice of length `n`, such that the `i`-th element is `true`
+        /// if and only if there is a directed path from `s` to `i` in the residual network.
+        /// The returned slice corresponds to a s-t minimum cut after calling `flow(s, t)` exactly once.
+        ///
+        /// The residual network is the graph whose edge set is given by gathering $(u, v)$
+        /// for each edge $e = (u, v, f_e, c_e)$ with $f_e < c_e$ and $(v, u)$ for each edge $e$ with $0 < f_e$.
+        /// Returns the set of the vertices that is reachable from `s` in the residual network.
+        ///
+        /// # Complexity
+        ///
+        /// - $O(n + m)$, where $m$ is the number of added edges.
         pub fn minCut(self: Self, s: usize) Allocator.Error![]bool {
             var visited = try self.allocator.alloc(bool, self.n);
             @memset(visited, false);

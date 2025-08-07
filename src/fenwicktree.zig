@@ -2,14 +2,30 @@ const std = @import("std");
 const Allocator = std.mem.Allocator;
 const assert = std.debug.assert;
 
-pub fn FenwickTree(comptime T: type, comptime e: T, comptime op: fn (T, T) T) type {
+/// Fenwick Tree (Binary‑Indexed Tree)
+/// Reference: https://en.wikipedia.org/wiki/Fenwick_tree
+///
+/// This is a wrapper around a tree of element type T, update operation op, and identity e.
+/// Initialize with `init`.
+pub fn FenwickTree(comptime T: type, comptime op: fn (T, T) T, comptime e: T) type {
     return struct {
         const Self = @This();
-
+        /// logical length of the array
         n: usize,
+        /// internal 1‑based tree representation
         data: []T,
         allocator: Allocator,
 
+        /// Creates an empty tree of length `n`, initialised with the identity.
+        /// Deinitialize with `deinit`.
+        ///
+        /// # Constraints
+        ///
+        /// - $0 \leq n < 10^8$
+        ///
+        /// # Complexity
+        ///
+        /// - $O(n)$
         pub fn init(allocator: Allocator, n: usize) !Self {
             const self = Self{
                 .n = n,
@@ -19,9 +35,25 @@ pub fn FenwickTree(comptime T: type, comptime e: T, comptime op: fn (T, T) T) ty
             @memset(self.data, e);
             return self;
         }
+
+        /// Release all allocated memory.
         pub fn deinit(self: *Self) void {
             self.allocator.free(self.data);
         }
+
+        /// Processes `a[idx] += x` (`a[idx] = op(a[idx], x)`).
+        ///
+        /// # Constraints
+        ///
+        /// - $0 \leq idx < n$
+        ///
+        /// # Panics
+        ///
+        /// Panics if the above constraints are not satisfied.
+        ///
+        /// # Complexity
+        ///
+        /// - $O(\log n)$
         pub fn add(self: *Self, idx: usize, val: T) void {
             assert(idx < self.n);
             var p = idx + 1;
@@ -30,10 +62,26 @@ pub fn FenwickTree(comptime T: type, comptime e: T, comptime op: fn (T, T) T) ty
                 p += p & (~p +% 1);
             }
         }
+
+        /// Returns `a[l] + a[l + 1] + ... + a[r - 1]` (`op(a[l], op(a[l + 1], op(..., a[r - 1])))`).
+        ///
+        /// # Constraints
+        ///
+        /// - $0 \leq l \leq r \leq n$
+        ///
+        /// # Panics
+        ///
+        /// Panics if the above constraints are not satisfied.
+        ///
+        /// # Complexity
+        ///
+        /// - $O(\log n)$
         pub fn sum(self: *Self, l: usize, r: usize) T {
             assert(l <= r and r <= self.n);
             return self.accum(r) - self.accum(l);
         }
+
+        /// Internal helper, prefix sum of `[0, idx)`.
         fn accum(self: *Self, idx: usize) T {
             var r = idx;
             var s = @as(T, e);
@@ -46,8 +94,11 @@ pub fn FenwickTree(comptime T: type, comptime e: T, comptime op: fn (T, T) T) ty
     };
 }
 
-pub const FenwickTreeI64 = FenwickTree(i64, 0, operation(i64).addition);
-pub const FenwickTreeI32 = FenwickTree(i32, 0, operation(i32).addition);
+/// Convenient helper for i64 FenwickTree.
+pub const FenwickTreeI64 = FenwickTree(i64, operation(i64).addition, 0);
+
+/// Convenient helper for i32 FenwickTree.
+pub const FenwickTreeI32 = FenwickTree(i32, operation(i32).addition, 0);
 
 fn operation(comptime T: type) type {
     return struct {
