@@ -7,7 +7,6 @@ pub fn StaticModint(comptime m: comptime_int) type {
     }
 
     const T = comptime std.math.IntFittingRange(0, m - 1);
-    const U = comptime std.math.IntFittingRange(0, (m - 1) * (m - 1));
 
     return struct {
         const Self = @This();
@@ -36,7 +35,7 @@ pub fn StaticModint(comptime m: comptime_int) type {
         }
 
         pub inline fn add(self: Self, v: anytype) Self {
-            const x: U = comptime switch (@TypeOf(v)) {
+            const x: T = switch (@TypeOf(v)) {
                 inline Self => v.v,
                 inline else => std.math.comptimeMod(v, m),
             };
@@ -46,7 +45,7 @@ pub fn StaticModint(comptime m: comptime_int) type {
         }
 
         pub inline fn sub(self: Self, v: anytype) Self {
-            const x: T = comptime switch (@TypeOf(v)) {
+            const x: T = switch (@TypeOf(v)) {
                 inline Self => v.v,
                 inline else => std.math.comptimeMod(v, m),
             };
@@ -60,38 +59,37 @@ pub fn StaticModint(comptime m: comptime_int) type {
         }
 
         pub inline fn mul(self: Self, v: anytype) Self {
-            const x: U = comptime switch (@TypeOf(v)) {
+            const x: T = switch (@TypeOf(v)) {
                 inline Self => v.v,
                 inline else => std.math.comptimeMod(v, m),
             };
             return Self{
-                .v = std.math.comptimeMod(self.v * x, m),
+                .v = std.math.comptimeMod(std.math.mulWide(T, self.v, x), m),
             };
         }
 
         pub inline fn div(self: Self, v: anytype) Self {
-            const x: U = comptime switch (@TypeOf(v)) {
-                inline Self => v.inv(),
+            const x: T = switch (@TypeOf(v)) {
+                inline Self => v.inv().v,
                 inline else => Self.init(v).inv().v,
             };
             return self.mul(x);
         }
 
-        pub inline fn addAsg(self: *Self, v: anytype) Self {
+        pub inline fn addAsg(self: *Self, v: anytype) void {
             self = self.add(v);
-            return self;
         }
-        pub inline fn subAsg(self: *Self, v: anytype) Self {
+
+        pub inline fn subAsg(self: *Self, v: anytype) void {
             self = self.sub(v);
-            return self;
         }
-        pub inline fn mulAsg(self: *Self, v: anytype) Self {
+
+        pub inline fn mulAsg(self: *Self, v: anytype) void {
             self = self.mul(v);
-            return self;
         }
-        pub inline fn divAsg(self: *Self, v: anytype) Self {
+
+        pub inline fn divAsg(self: *Self, v: anytype) void {
             self = self.div(v);
-            return self;
         }
 
         pub inline fn negate(self: Self) Self {
@@ -99,6 +97,7 @@ pub fn StaticModint(comptime m: comptime_int) type {
         }
 
         pub inline fn pow(self: Self, n: anytype) Self {
+            @setEvalBranchQuota(100000);
             std.debug.assert(0 <= n);
             var x: Self = self;
             var r: Self = Self.raw(1);
@@ -171,25 +170,30 @@ test StaticModint {
 
     // add
     try std.testing.expectEqual(Modint1000000007.init(1).add(1).v, 2);
+    try std.testing.expectEqual(Modint1000000007.init(1).add(2).add(3).v, 6);
     try std.testing.expectEqual(Modint1000000007.init(1_000_000_006).add(2).v, 1);
 
     // sub
     try std.testing.expectEqual(Modint1000000007.init(2).sub(1).v, 1);
+    try std.testing.expectEqual(Modint1000000007.init(3).sub(2).sub(1).v, 0);
     try std.testing.expectEqual(Modint1000000007.init(0).sub(1).v, 1_000_000_006);
 
     // mul
     try std.testing.expectEqual(Modint1000000007.init(1).mul(1).v, 1);
     try std.testing.expectEqual(Modint1000000007.init(2).mul(2).v, 4);
+    try std.testing.expectEqual(Modint1000000007.init(1).mul(2).mul(3).v, 6);
     try std.testing.expectEqual(Modint1000000007.init(100_000).mul(100_000).v, 999_999_937);
 
     // div
     try std.testing.expectEqual(Modint1000000007.init(0).div(1).v, 0);
     try std.testing.expectEqual(Modint1000000007.init(1).div(1).v, 1);
     try std.testing.expectEqual(Modint1000000007.init(2).div(2).v, 1);
+    try std.testing.expectEqual(Modint1000000007.init(6).div(2).div(3).v, 1);
     try std.testing.expectEqual(Modint1000000007.init(1).div(42).v, 23_809_524);
 
     // sum
     // product
     // binop_coercion
     // assign_coercion
+    // mod1
 }
