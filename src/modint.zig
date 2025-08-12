@@ -2,35 +2,57 @@ const std = @import("std");
 const internal = @import("internal_math.zig");
 const assert = std.debug.assert;
 
+/// Modular integer with a **compile-time** modulus `m`.
+///
+/// # Constraints
+///
+/// - `m >= 1` (otherwise a compile error)
+///
 pub fn StaticModint(comptime m: comptime_int) type {
     if (m < 1) {
         @compileError("m must be greater than or equal to 1");
     }
 
+    // The smallest unsigned integer type that fits `[0, m-1]`.
     const T = comptime std.math.IntFittingRange(0, m - 1);
 
     return struct {
         const Self = @This();
+        /// `true` if `m` is prime (evaluated at comptime).
         const prime = internal.comptimeIsPrime(m);
 
+        /// Stored canonical representative in `[0, m-1]`.
         val: T,
 
+        /// Returns the modulus (`m`).
         pub fn mod(_: Self) comptime_int {
             return m;
         }
 
+        /// Constructs `StaticModint` from a `v < m` without taking mod.
+        /// It is the function for constant-factor speedup.
+        ///
+        /// # Constraints
+        ///
+        /// - `v` is less than `m`
+        ///
         pub fn raw(v: anytype) Self {
             return Self{ .val = @intCast(v) };
         }
 
+        /// Returns the representative with casting to another integer `Type`.
         pub fn as(self: Self, Type: type) Type {
             return @intCast(self.val);
         }
 
+        /// Constructs a value reduced modulo `m`.
+        /// Works for both signed and unsigned integers.
         pub fn init(v: anytype) Self {
             return Self{ .val = std.math.comptimeMod(v, m) };
         }
 
+        /// Monoid sum over a slice, reduced mod `m`.
+        /// Returns `Σ v[i] (mod m)`.
         pub fn sum(Type: type, v: []const Type) Self {
             var x = Self.init(0);
             for (v) |e| {
@@ -39,6 +61,8 @@ pub fn StaticModint(comptime m: comptime_int) type {
             return x;
         }
 
+        /// Monoid product over a slice, reduced mod `m`.
+        /// Returns `∏ v[i] (mod m)`.
         pub fn product(Type: type, v: []const Type) Self {
             var x = Self.init(1);
             for (v) |e| {
@@ -47,6 +71,7 @@ pub fn StaticModint(comptime m: comptime_int) type {
             return x;
         }
 
+        /// Returns `self + v (mod m)`.
         pub inline fn add(self: Self, v: anytype) Self {
             const x: T = switch (@TypeOf(v)) {
                 inline Self => v.val,
@@ -57,6 +82,7 @@ pub fn StaticModint(comptime m: comptime_int) type {
             };
         }
 
+        /// Returns `self - v (mod m)`.
         pub inline fn sub(self: Self, v: anytype) Self {
             const x: T = switch (@TypeOf(v)) {
                 inline Self => v.val,
@@ -71,6 +97,7 @@ pub fn StaticModint(comptime m: comptime_int) type {
             };
         }
 
+        /// Returns `self * v (mod m)`.
         pub inline fn mul(self: Self, v: anytype) Self {
             const x: T = switch (@TypeOf(v)) {
                 inline Self => v.val,
@@ -81,6 +108,11 @@ pub fn StaticModint(comptime m: comptime_int) type {
             };
         }
 
+        /// Returns `self / v (mod m)` (i.e. `self * inv(v)`).
+        ///
+        /// # Panics
+        ///
+        /// Panics in debug if `v` is not invertible when `m` is composite.
         pub inline fn div(self: Self, v: anytype) Self {
             const x: T = switch (@TypeOf(v)) {
                 inline Self => v.inv().val,
@@ -89,26 +121,32 @@ pub fn StaticModint(comptime m: comptime_int) type {
             return self.mul(x);
         }
 
+        /// In-place `+= v (mod m)`.
         pub inline fn addAsg(self: *Self, v: anytype) void {
             self.val = self.add(v).val;
         }
 
+        /// In-place `-= v (mod m)`.
         pub inline fn subAsg(self: *Self, v: anytype) void {
             self.val = self.sub(v).val;
         }
 
+        /// In-place `*= v (mod m)`.
         pub inline fn mulAsg(self: *Self, v: anytype) void {
             self.val = self.mul(v).val;
         }
 
+        /// In-place `/= v (mod m)`.
         pub inline fn divAsg(self: *Self, v: anytype) void {
             self.val = self.div(v).val;
         }
 
+        /// Returns `-self (mod m)`.
         pub inline fn negate(self: Self) Self {
             return Self.raw(0).sub(self.val);
         }
 
+        /// Returns `self` to the power of `n`.
         pub inline fn pow(self: Self, n: anytype) Self {
             @setEvalBranchQuota(100000);
             assert(0 <= n);
@@ -124,6 +162,11 @@ pub fn StaticModint(comptime m: comptime_int) type {
             return r;
         }
 
+        /// Retruns the multiplicative inverse of `self`.
+        ///
+        /// # Panics
+        ///
+        /// Panics if the multiplicative inverse does not exist.
         pub inline fn inv(self: Self) Self {
             if (comptime prime) {
                 return self.pow(m - 2);
