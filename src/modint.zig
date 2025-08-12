@@ -15,20 +15,36 @@ pub fn StaticModint(comptime m: comptime_int) type {
 
         val: T,
 
-        pub inline fn mod(_: Self) comptime_int {
+        pub fn mod(_: Self) comptime_int {
             return m;
         }
 
-        pub inline fn raw(v: anytype) Self {
+        pub fn raw(v: anytype) Self {
             return Self{ .val = @intCast(v) };
         }
 
-        pub inline fn as(self: Self, Type: type) Type {
+        pub fn as(self: Self, Type: type) Type {
             return @intCast(self.val);
         }
 
-        pub inline fn init(v: anytype) Self {
+        pub fn init(v: anytype) Self {
             return Self{ .val = std.math.comptimeMod(v, m) };
+        }
+
+        pub fn sum(Type: type, v: []const Type) Self {
+            var x = Self.init(0);
+            for (v) |e| {
+                x.addAsg(e);
+            }
+            return x;
+        }
+
+        pub fn product(Type: type, v: []const Type) Self {
+            var x = Self.init(1);
+            for (v) |e| {
+                x.mulAsg(e);
+            }
+            return x;
         }
 
         pub inline fn add(self: Self, v: anytype) Self {
@@ -131,31 +147,43 @@ pub fn DynamicModint(id: comptime_int) type {
         val: u32,
         var bt = internal.Barrett.init(998244353);
 
-        pub inline fn mod() u32 {
+        pub fn mod() u32 {
             return bt.umod();
         }
 
-        inline fn asMod(T: type) T {
-            return @intCast(bt.umod());
-        }
-
-        pub inline fn setMod(m: u32) void {
+        pub fn setMod(m: u32) void {
             if (m == 0) {
                 @panic("the modulus must not be 0");
             }
             Self.bt = internal.Barrett.init(m);
         }
 
-        pub inline fn raw(v: anytype) Self {
+        pub fn raw(v: anytype) Self {
             return Self{
                 .val = @intCast(v),
             };
         }
 
-        pub inline fn init(v: anytype) Self {
+        pub fn init(v: anytype) Self {
             return Self{
                 .val = takeMod(v),
             };
+        }
+
+        pub fn sum(Type: type, v: []const Type) Self {
+            var x = Self.init(0);
+            for (v) |e| {
+                x.addAsg(e);
+            }
+            return x;
+        }
+
+        pub fn product(Type: type, v: []const Type) Self {
+            var x = Self.init(1);
+            for (v) |e| {
+                x.mulAsg(e);
+            }
+            return x;
         }
 
         pub inline fn add(self: Self, v: anytype) Self {
@@ -239,17 +267,8 @@ pub fn DynamicModint(id: comptime_int) type {
         }
 
         fn takeMod(v: anytype) u32 {
-            const T = @TypeOf(v);
-            switch (T) {
-                inline comptime_int => {
-                    const m: std.math.IntFittingRange(0, v) = @intCast(bt.umod());
-                    return @intCast(@mod(v, m));
-                },
-                inline else => {
-                    const m: T = @intCast(bt.umod());
-                    return @intCast(@mod(v, m));
-                },
-            }
+            const m: i64 = @intCast(bt.umod());
+            return @intCast(@mod(v, m));
         }
     };
 }
@@ -259,52 +278,57 @@ pub const Modint = DynamicModint(-1);
 const testing = std.testing;
 const expectEqual = testing.expectEqual;
 test StaticModint {
+    const init = Modint1000000007.init;
+    const sum = Modint1000000007.sum;
+    const product = Modint1000000007.product;
+
     // init
-    try expectEqual(Modint1000000007.init(0).val, 0);
-    try expectEqual(Modint1000000007.init(1).val, 1);
-    try expectEqual(Modint1000000007.init(1_000_000_008).val, 1);
-    try expectEqual(Modint1000000007.init(-1).val, 1_000_000_006);
+    try expectEqual(init(0).val, 0);
+    try expectEqual(init(1).val, 1);
+    try expectEqual(init(1_000_000_008).val, 1);
+    try expectEqual(init(-1).val, 1_000_000_006);
 
     // add
-    try expectEqual(Modint1000000007.init(1).add(1).val, 2);
-    try expectEqual(Modint1000000007.init(1).add(2).add(3).val, 6);
-    try expectEqual(Modint1000000007.init(1_000_000_006).add(2).val, 1);
+    try expectEqual(init(1).add(1).val, 2);
+    try expectEqual(init(1).add(2).add(3).val, 6);
+    try expectEqual(init(1_000_000_006).add(2).val, 1);
 
     // sub
-    try expectEqual(Modint1000000007.init(2).sub(1).val, 1);
-    try expectEqual(Modint1000000007.init(3).sub(2).sub(1).val, 0);
-    try expectEqual(Modint1000000007.init(0).sub(1).val, 1_000_000_006);
+    try expectEqual(init(2).sub(1).val, 1);
+    try expectEqual(init(3).sub(2).sub(1).val, 0);
+    try expectEqual(init(0).sub(1).val, 1_000_000_006);
 
     // mul
-    try expectEqual(Modint1000000007.init(1).mul(1).val, 1);
-    try expectEqual(Modint1000000007.init(2).mul(2).val, 4);
-    try expectEqual(Modint1000000007.init(1).mul(2).mul(3).val, 6);
-    try expectEqual(Modint1000000007.init(100_000).mul(100_000).val, 999_999_937);
+    try expectEqual(init(1).mul(1).val, 1);
+    try expectEqual(init(2).mul(2).val, 4);
+    try expectEqual(init(1).mul(2).mul(3).val, 6);
+    try expectEqual(init(100_000).mul(100_000).val, 999_999_937);
 
     // div
-    try expectEqual(Modint1000000007.init(0).div(1).val, 0);
-    try expectEqual(Modint1000000007.init(1).div(1).val, 1);
-    try expectEqual(Modint1000000007.init(2).div(2).val, 1);
-    try expectEqual(Modint1000000007.init(6).div(2).div(3).val, 1);
-    try expectEqual(Modint1000000007.init(1).div(42).val, 23_809_524);
+    try expectEqual(init(0).div(1).val, 0);
+    try expectEqual(init(1).div(1).val, 1);
+    try expectEqual(init(2).div(2).val, 1);
+    try expectEqual(init(6).div(2).div(3).val, 1);
+    try expectEqual(init(1).div(42).val, 23_809_524);
 
     // sum
+    try expectEqual(init(-3).val, sum(i32, &[_]i32{ -1, 2, -3, 4, -5 }).val);
 
     // product
+    try expectEqual(init(-120).val, product(i32, &[_]i32{ -1, 2, -3, 4, -5 }).val);
 
-    const f = Modint1000000007.init;
+    // binop_coercion
     const a = 10_293_812;
     const b = 9_083_240_982;
 
-    // binop_coercion
-    try expectEqual(f(a).add(b), f(a).add(f(b)));
-    try expectEqual(f(a).sub(b), f(a).sub(f(b)));
-    try expectEqual(f(a).mul(b), f(a).mul(f(b)));
-    try expectEqual(f(a).div(b), f(a).div(f(b)));
+    try expectEqual(init(a).add(b), init(a).add(init(b)));
+    try expectEqual(init(a).sub(b), init(a).sub(init(b)));
+    try expectEqual(init(a).mul(b), init(a).mul(init(b)));
+    try expectEqual(init(a).div(b), init(a).div(init(b)));
 
     // assign_coercion
-    const expected = f(a).add(b).mul(b).sub(b).div(b).val;
-    var c = f(a);
+    const expected = init(a).add(b).mul(b).sub(b).div(b).val;
+    var c = init(a);
     c.addAsg(b);
     c.mulAsg(b);
     c.subAsg(b);
@@ -316,19 +340,28 @@ test DynamicModint {
     const Mint1007 = DynamicModint(1007);
     Mint1007.setMod(1007);
 
-    const f = Mint1007.init;
+    const init = Mint1007.init;
+    const sum = Mint1007.sum;
+    const product = Mint1007.product;
+
+    // sum
+    try expectEqual(init(-3).val, sum(i32, &[_]i32{ -1, 2, -3, 4, -5 }).val);
+
+    // product
+    try expectEqual(init(-120).val, product(i32, &[_]i32{ -1, 2, -3, 4, -5 }).val);
+
+    // binop_coercion
     const a = 10_293_812;
     const b = 9_083_240_982;
 
-    // binop_coercion
-    try expectEqual(f(a).add(b), f(a).add(f(b)));
-    try expectEqual(f(a).sub(b), f(a).sub(f(b)));
-    try expectEqual(f(a).mul(b), f(a).mul(f(b)));
-    try expectEqual(f(a).div(b), f(a).div(f(b)));
+    try expectEqual(init(a).add(b), init(a).add(init(b)));
+    try expectEqual(init(a).sub(b), init(a).sub(init(b)));
+    try expectEqual(init(a).mul(b), init(a).mul(init(b)));
+    try expectEqual(init(a).div(b), init(a).div(init(b)));
 
     // assign_coercion
-    const expected = f(a).add(b).mul(b).sub(b).div(b).val;
-    var c = f(a);
+    const expected = init(a).add(b).mul(b).sub(b).div(b).val;
+    var c = init(a);
     c.addAsg(b);
     c.mulAsg(b);
     c.subAsg(b);
