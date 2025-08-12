@@ -12,88 +12,84 @@ pub fn StaticModint(comptime m: comptime_int) type {
         const Self = @This();
         const prime = internal.comptimeIsPrime(m);
 
-        v: T,
+        val: T,
 
         pub inline fn mod(_: Self) comptime_int {
             return m;
         }
 
         pub inline fn raw(v: anytype) Self {
-            return Self{ .v = @intCast(v) };
-        }
-
-        pub inline fn val(self: Self) T {
-            return self.v;
+            return Self{ .val = @intCast(v) };
         }
 
         pub inline fn as(self: Self, Type: type) Type {
-            return @intCast(self.v);
+            return @intCast(self.val);
         }
 
         pub inline fn init(v: anytype) Self {
-            return Self{ .v = std.math.comptimeMod(v, m) };
+            return Self{ .val = std.math.comptimeMod(v, m) };
         }
 
         pub inline fn add(self: Self, v: anytype) Self {
             const x: T = switch (@TypeOf(v)) {
-                inline Self => v.v,
+                inline Self => v.val,
                 inline else => std.math.comptimeMod(v, m),
             };
             return Self{
-                .v = std.math.comptimeMod(self.v + x, m),
+                .val = std.math.comptimeMod(self.val + x, m),
             };
         }
 
         pub inline fn sub(self: Self, v: anytype) Self {
             const x: T = switch (@TypeOf(v)) {
-                inline Self => v.v,
+                inline Self => v.val,
                 inline else => std.math.comptimeMod(v, m),
             };
-            var y: T = self.v -% x;
+            var y: T = self.val -% x;
             if (y >= m) {
                 y +%= m;
             }
             return Self{
-                .v = y,
+                .val = y,
             };
         }
 
         pub inline fn mul(self: Self, v: anytype) Self {
             const x: T = switch (@TypeOf(v)) {
-                inline Self => v.v,
+                inline Self => v.val,
                 inline else => std.math.comptimeMod(v, m),
             };
             return Self{
-                .v = std.math.comptimeMod(std.math.mulWide(T, self.v, x), m),
+                .val = std.math.comptimeMod(std.math.mulWide(T, self.val, x), m),
             };
         }
 
         pub inline fn div(self: Self, v: anytype) Self {
             const x: T = switch (@TypeOf(v)) {
-                inline Self => v.inv().v,
-                inline else => Self.init(v).inv().v,
+                inline Self => v.inv().val,
+                inline else => Self.init(v).inv().val,
             };
             return self.mul(x);
         }
 
         pub inline fn addAsg(self: *Self, v: anytype) void {
-            self = self.add(v);
+            self.val = self.add(v).val;
         }
 
         pub inline fn subAsg(self: *Self, v: anytype) void {
-            self = self.sub(v);
+            self.val = self.sub(v).val;
         }
 
         pub inline fn mulAsg(self: *Self, v: anytype) void {
-            self = self.mul(v);
+            self.val = self.mul(v).val;
         }
 
         pub inline fn divAsg(self: *Self, v: anytype) void {
-            self = self.div(v);
+            self.val = self.div(v).val;
         }
 
         pub inline fn negate(self: Self) Self {
-            return Self.raw(0).sub(self.v);
+            return Self.raw(0).sub(self.val);
         }
 
         pub inline fn pow(self: Self, n: anytype) Self {
@@ -155,41 +151,41 @@ pub const Modint1000000007 = StaticModint(1000000007);
 
 test StaticModint {
     var s = StaticModint(13).init(0);
-    std.debug.print("{}\n", .{s.v});
+    std.debug.print("{}\n", .{s.val});
     s = s.add(1).add(1);
-    std.debug.print("{}\n", .{s.v});
+    std.debug.print("{}\n", .{s.val});
     s = s.pow(5);
     s = s.inv();
-    std.debug.print("{}\n", .{s.v});
+    std.debug.print("{}\n", .{s.val});
 
     // init
-    try std.testing.expectEqual(Modint1000000007.init(0).v, 0);
-    try std.testing.expectEqual(Modint1000000007.init(1).v, 1);
-    try std.testing.expectEqual(Modint1000000007.init(1_000_000_008).v, 1);
-    try std.testing.expectEqual(Modint1000000007.init(-1).v, 1_000_000_006);
+    try std.testing.expectEqual(Modint1000000007.init(0).val, 0);
+    try std.testing.expectEqual(Modint1000000007.init(1).val, 1);
+    try std.testing.expectEqual(Modint1000000007.init(1_000_000_008).val, 1);
+    try std.testing.expectEqual(Modint1000000007.init(-1).val, 1_000_000_006);
 
     // add
-    try std.testing.expectEqual(Modint1000000007.init(1).add(1).v, 2);
-    try std.testing.expectEqual(Modint1000000007.init(1).add(2).add(3).v, 6);
-    try std.testing.expectEqual(Modint1000000007.init(1_000_000_006).add(2).v, 1);
+    try std.testing.expectEqual(Modint1000000007.init(1).add(1).val, 2);
+    try std.testing.expectEqual(Modint1000000007.init(1).add(2).add(3).val, 6);
+    try std.testing.expectEqual(Modint1000000007.init(1_000_000_006).add(2).val, 1);
 
     // sub
-    try std.testing.expectEqual(Modint1000000007.init(2).sub(1).v, 1);
-    try std.testing.expectEqual(Modint1000000007.init(3).sub(2).sub(1).v, 0);
-    try std.testing.expectEqual(Modint1000000007.init(0).sub(1).v, 1_000_000_006);
+    try std.testing.expectEqual(Modint1000000007.init(2).sub(1).val, 1);
+    try std.testing.expectEqual(Modint1000000007.init(3).sub(2).sub(1).val, 0);
+    try std.testing.expectEqual(Modint1000000007.init(0).sub(1).val, 1_000_000_006);
 
     // mul
-    try std.testing.expectEqual(Modint1000000007.init(1).mul(1).v, 1);
-    try std.testing.expectEqual(Modint1000000007.init(2).mul(2).v, 4);
-    try std.testing.expectEqual(Modint1000000007.init(1).mul(2).mul(3).v, 6);
-    try std.testing.expectEqual(Modint1000000007.init(100_000).mul(100_000).v, 999_999_937);
+    try std.testing.expectEqual(Modint1000000007.init(1).mul(1).val, 1);
+    try std.testing.expectEqual(Modint1000000007.init(2).mul(2).val, 4);
+    try std.testing.expectEqual(Modint1000000007.init(1).mul(2).mul(3).val, 6);
+    try std.testing.expectEqual(Modint1000000007.init(100_000).mul(100_000).val, 999_999_937);
 
     // div
-    try std.testing.expectEqual(Modint1000000007.init(0).div(1).v, 0);
-    try std.testing.expectEqual(Modint1000000007.init(1).div(1).v, 1);
-    try std.testing.expectEqual(Modint1000000007.init(2).div(2).v, 1);
-    try std.testing.expectEqual(Modint1000000007.init(6).div(2).div(3).v, 1);
-    try std.testing.expectEqual(Modint1000000007.init(1).div(42).v, 23_809_524);
+    try std.testing.expectEqual(Modint1000000007.init(0).div(1).val, 0);
+    try std.testing.expectEqual(Modint1000000007.init(1).div(1).val, 1);
+    try std.testing.expectEqual(Modint1000000007.init(2).div(2).val, 1);
+    try std.testing.expectEqual(Modint1000000007.init(6).div(2).div(3).val, 1);
+    try std.testing.expectEqual(Modint1000000007.init(1).div(42).val, 23_809_524);
 
     // sum
     // product
