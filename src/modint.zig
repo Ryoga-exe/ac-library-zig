@@ -128,9 +128,11 @@ pub fn StaticModint(comptime m: comptime_int) type {
             if (comptime prime) {
                 return self.pow(m - 2);
             } else {
-                const g, const x = internal.invGcd(self.v, m);
+                const g, const x = internal.invGcd(self.val, m);
                 assert(g == 1);
-                return x;
+                return Self{
+                    .val = @intCast(x),
+                };
             }
         }
     };
