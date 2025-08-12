@@ -1,5 +1,6 @@
 const std = @import("std");
 const internal = @import("internal_math.zig");
+const assert = std.debug.assert;
 
 pub fn StaticModint(comptime m: comptime_int) type {
     if (m < 1) {
@@ -94,9 +95,9 @@ pub fn StaticModint(comptime m: comptime_int) type {
 
         pub inline fn pow(self: Self, n: anytype) Self {
             @setEvalBranchQuota(100000);
-            std.debug.assert(0 <= n);
-            var x: Self = self;
-            var r: Self = Self.raw(1);
+            assert(0 <= n);
+            var x = self;
+            var r = Self.init(1);
             var _n: std.math.IntFittingRange(0, n) = n;
             while (_n > 0) : (_n >>= 1) {
                 if (_n & 1 == 1) {
@@ -112,42 +113,148 @@ pub fn StaticModint(comptime m: comptime_int) type {
                 return self.pow(m - 2);
             } else {
                 const g, const x = internal.invGcd(self.v, m);
-                std.debug.assert(g == 1);
+                assert(g == 1);
                 return x;
             }
         }
     };
 }
 
-pub const DynamicModint = struct {
-    const Self = @This();
-
-    v: u32,
-    m: u32,
-    bt: internal.Barrett,
-
-    pub inline fn mod(self: Self) u32 {
-        return self.m;
-    }
-    pub inline fn raw(v: anytype) Self {
-        return Self{ .v = @intCast(v) };
-    }
-    pub inline fn val(self: Self) u32 {
-        return self.v;
-    }
-    pub inline fn as(self: Self, Type: type) Type {
-        return @intCast(self.v);
-    }
-    pub inline fn init(v: anytype) Self {
-        _ = v; // autofix
-    }
-    pub fn setMod(v: anytype) void {
-        _ = v; // autofix
-    }
-};
-
 pub const Modint998244353 = StaticModint(998244353);
 pub const Modint1000000007 = StaticModint(1000000007);
+
+pub fn DynamicModint(id: comptime_int) type {
+    return struct {
+        const Self = @This();
+        const _id = id;
+
+        val: u32,
+        var bt = internal.Barrett.init(998244353);
+
+        pub inline fn mod() u32 {
+            return bt.umod();
+        }
+
+        inline fn asMod(T: type) T {
+            return @intCast(bt.umod());
+        }
+
+        pub inline fn setMod(m: u32) void {
+            if (m == 0) {
+                @panic("the modulus must not be 0");
+            }
+            Self.bt = internal.Barrett.init(m);
+        }
+
+        pub inline fn raw(v: anytype) Self {
+            return Self{
+                .val = @intCast(v),
+            };
+        }
+
+        pub inline fn init(v: anytype) Self {
+            return Self{
+                .val = takeMod(v),
+            };
+        }
+
+        pub inline fn add(self: Self, v: anytype) Self {
+            const x = self.val + switch (@TypeOf(v)) {
+                inline Self => v.val,
+                inline else => takeMod(v),
+            };
+            return Self{
+                .val = if (x >= mod()) x - mod() else x,
+            };
+        }
+
+        pub inline fn sub(self: Self, v: anytype) Self {
+            const x = self.val -% switch (@TypeOf(v)) {
+                inline Self => v.val,
+                inline else => takeMod(v),
+            };
+            return Self{
+                .val = if (x >= mod()) x - mod() else x,
+            };
+        }
+
+        pub inline fn mul(self: Self, v: anytype) Self {
+            const x = bt.mul(self.val, switch (@TypeOf(v)) {
+                inline Self => v.val,
+                inline else => takeMod(v),
+            });
+            return Self{
+                .val = x,
+            };
+        }
+
+        pub inline fn div(self: Self, v: anytype) Self {
+            const x = switch (@TypeOf(v)) {
+                inline Self => v.inv().val,
+                inline else => Self.init(v).inv().val,
+            };
+            return self.mul(x);
+        }
+
+        pub inline fn addAsg(self: *Self, v: anytype) void {
+            self.val = self.add(v).val;
+        }
+
+        pub inline fn subAsg(self: *Self, v: anytype) void {
+            self.val = self.sub(v).val;
+        }
+
+        pub inline fn mulAsg(self: *Self, v: anytype) void {
+            self.val = self.mul(v).val;
+        }
+
+        pub inline fn divAsg(self: *Self, v: anytype) void {
+            self.val = self.div(v).val;
+        }
+
+        pub inline fn negate(self: Self) Self {
+            return Self.raw(0).sub(self.val);
+        }
+
+        pub inline fn pow(self: Self, n: anytype) Self {
+            assert(0 <= n);
+            var x = self;
+            var r = Self.init(1);
+            var _n: std.math.IntFittingRange(0, n) = n;
+            while (_n > 0) : (_n >>= 1) {
+                if (_n & 1 == 1) {
+                    r = r.mul(x);
+                }
+                x = x.mul(x);
+            }
+            return r;
+        }
+
+        pub inline fn inv(self: Self) Self {
+            const g, const x = internal.invGcd(self.val, mod());
+            assert(g == 1);
+            return Self{
+                .val = @intCast(x),
+            };
+        }
+
+        fn takeMod(v: anytype) u32 {
+            const T = @TypeOf(v);
+            switch (T) {
+                inline comptime_int => {
+                    const m: std.math.IntFittingRange(0, v) = @intCast(bt.umod());
+                    return @intCast(@mod(v, m));
+                },
+                inline else => {
+                    const m: T = @intCast(bt.umod());
+                    return @intCast(@mod(v, m));
+                },
+            }
+        }
+    };
+}
+
+pub const Modint = DynamicModint(-1);
 
 const testing = std.testing;
 const expectEqual = testing.expectEqual;
@@ -203,4 +310,35 @@ test StaticModint {
     c.subAsg(b);
     c.divAsg(b);
     try expectEqual(expected, c.val);
+}
+
+test DynamicModint {
+    const Mint1007 = DynamicModint(1007);
+    Mint1007.setMod(1007);
+
+    const f = Mint1007.init;
+    const a = 10_293_812;
+    const b = 9_083_240_982;
+
+    // binop_coercion
+    try expectEqual(f(a).add(b), f(a).add(f(b)));
+    try expectEqual(f(a).sub(b), f(a).sub(f(b)));
+    try expectEqual(f(a).mul(b), f(a).mul(f(b)));
+    try expectEqual(f(a).div(b), f(a).div(f(b)));
+
+    // assign_coercion
+    const expected = f(a).add(b).mul(b).sub(b).div(b).val;
+    var c = f(a);
+    c.addAsg(b);
+    c.mulAsg(b);
+    c.subAsg(b);
+    c.divAsg(b);
+    try expectEqual(expected, c.val);
+
+    // mod = 1 (corner case)
+    const Mint1 = DynamicModint(1);
+    Mint1.setMod(1);
+
+    const x = Mint1.init(123).pow(0);
+    try expectEqual(0, x.val);
 }
