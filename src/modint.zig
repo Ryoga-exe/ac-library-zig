@@ -7,7 +7,6 @@ const assert = std.debug.assert;
 /// # Constraints
 ///
 /// - `m >= 1` (otherwise a compile error)
-///
 pub fn StaticModint(comptime m: comptime_int) type {
     if (m < 1) {
         @compileError("m must be greater than or equal to 1");
@@ -108,7 +107,7 @@ pub fn StaticModint(comptime m: comptime_int) type {
             };
         }
 
-        /// Returns `self / v (mod m)` (i.e. `self * inv(v)`).
+        /// Returns `self / v (mod m)` (i.e., `self * inv(v)`).
         ///
         /// # Panics
         ///
@@ -181,21 +180,37 @@ pub fn StaticModint(comptime m: comptime_int) type {
     };
 }
 
+/// Modint for `mod = 998244353`.
 pub const Modint998244353 = StaticModint(998244353);
+/// Modint for `mod = 1000000007`.
 pub const Modint1000000007 = StaticModint(1000000007);
 
+/// Modular integer with a **runtime**-set modulus.
+///
+/// The modulus is shared across all values of the *same instantiation*
+/// `DynamicModint(id)`. Use different `id`s to keep separate global moduli.
 pub fn DynamicModint(id: comptime_int) type {
     return struct {
         const Self = @This();
-        const _id = id;
+        const _id = id; // disambiguates the type
 
-        val: u32,
+        /// Shared Barrett reducer for this type instantiation.
         var bt = internal.Barrett.init(998244353);
 
+        /// Stored canonical representative in `[0, mod()-1]`.
+        val: u32,
+
+        /// Returns the modulus.
         pub fn mod() u32 {
             return bt.umod();
         }
 
+        /// Sets the modulus for this type.
+        /// It must be called first.
+        ///
+        /// # Panics
+        ///
+        /// Panics if `m == 0`.
         pub fn setMod(m: u32) void {
             if (m == 0) {
                 @panic("the modulus must not be 0");
@@ -203,18 +218,34 @@ pub fn DynamicModint(id: comptime_int) type {
             Self.bt = internal.Barrett.init(m);
         }
 
+        /// Constructs `DynamicModint` from a `v < m` without taking mod.
+        /// It is the function for constant-factor speedup.
+        ///
+        /// # Constraints
+        ///
+        /// - `v` is less than `m`
+        ///
         pub fn raw(v: anytype) Self {
             return Self{
                 .val = @intCast(v),
             };
         }
 
+        /// Returns the representative with casting to another integer `Type`.
+        pub fn as(self: Self, Type: type) Type {
+            return @intCast(self.val);
+        }
+
+        /// Constructs a value reduced modulo `m`.
+        /// Works for both signed and unsigned integers.
         pub fn init(v: anytype) Self {
             return Self{
                 .val = takeMod(v),
             };
         }
 
+        /// Monoid sum over a slice, reduced mod `m`.
+        /// Returns `Σ v[i] (mod m)`.
         pub fn sum(Type: type, v: []const Type) Self {
             var x = Self.init(0);
             for (v) |e| {
@@ -223,6 +254,8 @@ pub fn DynamicModint(id: comptime_int) type {
             return x;
         }
 
+        /// Monoid product over a slice, reduced mod `m`.
+        /// Returns `∏ v[i] (mod m)`.
         pub fn product(Type: type, v: []const Type) Self {
             var x = Self.init(1);
             for (v) |e| {
@@ -231,6 +264,7 @@ pub fn DynamicModint(id: comptime_int) type {
             return x;
         }
 
+        /// `self + v (mod mod())`.
         pub inline fn add(self: Self, v: anytype) Self {
             const x = self.val + switch (@TypeOf(v)) {
                 inline Self => v.val,
@@ -241,6 +275,7 @@ pub fn DynamicModint(id: comptime_int) type {
             };
         }
 
+        /// `self - v (mod mod())`.
         pub inline fn sub(self: Self, v: anytype) Self {
             const x = self.val -% switch (@TypeOf(v)) {
                 inline Self => v.val,
@@ -251,6 +286,7 @@ pub fn DynamicModint(id: comptime_int) type {
             };
         }
 
+        /// `self * v (mod mod())` using Barrett reduction.
         pub inline fn mul(self: Self, v: anytype) Self {
             const x = bt.mul(self.val, switch (@TypeOf(v)) {
                 inline Self => v.val,
@@ -261,6 +297,11 @@ pub fn DynamicModint(id: comptime_int) type {
             };
         }
 
+        /// `self / v (mod mod())` (i.e., `self * inv(v)`).
+        ///
+        /// # Panics
+        ///
+        /// Panics in debug if `v` is not invertible when `m` is composite.
         pub inline fn div(self: Self, v: anytype) Self {
             const x = switch (@TypeOf(v)) {
                 inline Self => v.inv().val,
@@ -269,26 +310,32 @@ pub fn DynamicModint(id: comptime_int) type {
             return self.mul(x);
         }
 
+        /// In-place `+= v`.
         pub inline fn addAsg(self: *Self, v: anytype) void {
             self.val = self.add(v).val;
         }
 
+        /// In-place `-= v`.
         pub inline fn subAsg(self: *Self, v: anytype) void {
             self.val = self.sub(v).val;
         }
 
+        /// In-place `*= v`.
         pub inline fn mulAsg(self: *Self, v: anytype) void {
             self.val = self.mul(v).val;
         }
 
+        /// In-place `/= v`.
         pub inline fn divAsg(self: *Self, v: anytype) void {
             self.val = self.div(v).val;
         }
 
+        /// `-self (mod mod())`.
         pub inline fn negate(self: Self) Self {
             return Self.raw(0).sub(self.val);
         }
 
+        /// Returns `self` to the power of `n`.
         pub inline fn pow(self: Self, n: anytype) Self {
             assert(0 <= n);
             var x = self;
@@ -303,6 +350,11 @@ pub fn DynamicModint(id: comptime_int) type {
             return r;
         }
 
+        /// Retruns the multiplicative inverse of `self`.
+        ///
+        /// # Panics
+        ///
+        /// Panics if the multiplicative inverse does not exist.
         pub inline fn inv(self: Self) Self {
             const g, const x = internal.invGcd(self.val, mod());
             assert(g == 1);
@@ -311,6 +363,7 @@ pub fn DynamicModint(id: comptime_int) type {
             };
         }
 
+        /// Reduce `v` modulo current `mod()` to a canonical `u32` in `[0, mod()-1]`.
         fn takeMod(v: anytype) u32 {
             const m: i64 = @intCast(bt.umod());
             return @intCast(@mod(v, m));
@@ -318,6 +371,8 @@ pub fn DynamicModint(id: comptime_int) type {
     };
 }
 
+/// Alias handy for dynamic-mod situations where the `id` value is irrelevant.
+/// You will usually want your own `id` to keep moduli separate across modules.
 pub const Modint = DynamicModint(-1);
 
 const testing = std.testing;
