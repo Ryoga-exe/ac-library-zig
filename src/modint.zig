@@ -149,47 +149,58 @@ pub const DynamicModint = struct {
 pub const Modint998244353 = StaticModint(998244353);
 pub const Modint1000000007 = StaticModint(1000000007);
 
+const testing = std.testing;
+const expectEqual = testing.expectEqual;
 test StaticModint {
-    var s = StaticModint(13).init(0);
-    std.debug.print("{}\n", .{s.val});
-    s = s.add(1).add(1);
-    std.debug.print("{}\n", .{s.val});
-    s = s.pow(5);
-    s = s.inv();
-    std.debug.print("{}\n", .{s.val});
-
     // init
-    try std.testing.expectEqual(Modint1000000007.init(0).val, 0);
-    try std.testing.expectEqual(Modint1000000007.init(1).val, 1);
-    try std.testing.expectEqual(Modint1000000007.init(1_000_000_008).val, 1);
-    try std.testing.expectEqual(Modint1000000007.init(-1).val, 1_000_000_006);
+    try expectEqual(Modint1000000007.init(0).val, 0);
+    try expectEqual(Modint1000000007.init(1).val, 1);
+    try expectEqual(Modint1000000007.init(1_000_000_008).val, 1);
+    try expectEqual(Modint1000000007.init(-1).val, 1_000_000_006);
 
     // add
-    try std.testing.expectEqual(Modint1000000007.init(1).add(1).val, 2);
-    try std.testing.expectEqual(Modint1000000007.init(1).add(2).add(3).val, 6);
-    try std.testing.expectEqual(Modint1000000007.init(1_000_000_006).add(2).val, 1);
+    try expectEqual(Modint1000000007.init(1).add(1).val, 2);
+    try expectEqual(Modint1000000007.init(1).add(2).add(3).val, 6);
+    try expectEqual(Modint1000000007.init(1_000_000_006).add(2).val, 1);
 
     // sub
-    try std.testing.expectEqual(Modint1000000007.init(2).sub(1).val, 1);
-    try std.testing.expectEqual(Modint1000000007.init(3).sub(2).sub(1).val, 0);
-    try std.testing.expectEqual(Modint1000000007.init(0).sub(1).val, 1_000_000_006);
+    try expectEqual(Modint1000000007.init(2).sub(1).val, 1);
+    try expectEqual(Modint1000000007.init(3).sub(2).sub(1).val, 0);
+    try expectEqual(Modint1000000007.init(0).sub(1).val, 1_000_000_006);
 
     // mul
-    try std.testing.expectEqual(Modint1000000007.init(1).mul(1).val, 1);
-    try std.testing.expectEqual(Modint1000000007.init(2).mul(2).val, 4);
-    try std.testing.expectEqual(Modint1000000007.init(1).mul(2).mul(3).val, 6);
-    try std.testing.expectEqual(Modint1000000007.init(100_000).mul(100_000).val, 999_999_937);
+    try expectEqual(Modint1000000007.init(1).mul(1).val, 1);
+    try expectEqual(Modint1000000007.init(2).mul(2).val, 4);
+    try expectEqual(Modint1000000007.init(1).mul(2).mul(3).val, 6);
+    try expectEqual(Modint1000000007.init(100_000).mul(100_000).val, 999_999_937);
 
     // div
-    try std.testing.expectEqual(Modint1000000007.init(0).div(1).val, 0);
-    try std.testing.expectEqual(Modint1000000007.init(1).div(1).val, 1);
-    try std.testing.expectEqual(Modint1000000007.init(2).div(2).val, 1);
-    try std.testing.expectEqual(Modint1000000007.init(6).div(2).div(3).val, 1);
-    try std.testing.expectEqual(Modint1000000007.init(1).div(42).val, 23_809_524);
+    try expectEqual(Modint1000000007.init(0).div(1).val, 0);
+    try expectEqual(Modint1000000007.init(1).div(1).val, 1);
+    try expectEqual(Modint1000000007.init(2).div(2).val, 1);
+    try expectEqual(Modint1000000007.init(6).div(2).div(3).val, 1);
+    try expectEqual(Modint1000000007.init(1).div(42).val, 23_809_524);
 
     // sum
+
     // product
+
+    const f = Modint1000000007.init;
+    const a = 10_293_812;
+    const b = 9_083_240_982;
+
     // binop_coercion
+    try expectEqual(f(a).add(b), f(a).add(f(b)));
+    try expectEqual(f(a).sub(b), f(a).sub(f(b)));
+    try expectEqual(f(a).mul(b), f(a).mul(f(b)));
+    try expectEqual(f(a).div(b), f(a).div(f(b)));
+
     // assign_coercion
-    // mod1
+    const expected = f(a).add(b).mul(b).sub(b).div(b).val;
+    var c = f(a);
+    c.addAsg(b);
+    c.mulAsg(b);
+    c.subAsg(b);
+    c.divAsg(b);
+    try expectEqual(expected, c.val);
 }
