@@ -71,7 +71,7 @@ pub fn McfGraph(comptime Cap: type, comptime Cost: type) type {
         pub fn init(allocator: Allocator, n: usize) Self {
             return Self{
                 .allocator = allocator,
-                .edges = .{},
+                .edges = .empty,
                 .n = n,
             };
         }
@@ -315,7 +315,7 @@ pub fn McfGraph(comptime Cap: type, comptime Cost: type) type {
                 var flow_current: Cap = 0;
                 var cost_current: Cost = 0;
                 var prev_cost_per_flow: Cost = -1;
-                var result: ArrayList(CapCostPair) = .{};
+                var result: ArrayList(CapCostPair) = .empty;
                 try result.append(self.allocator, CapCostPair{ 0, 0 });
                 while (flow_current < flow_limit) {
                     if (!try self.refineDual(s, t, g, dual_dist, vis, prev_e)) {
@@ -390,7 +390,7 @@ pub fn McfGraph(comptime Cap: type, comptime Cost: type) type {
                     return math.order(a.key, b.key);
                 }
             };
-            var que_min: ArrayList(usize) = .{};
+            var que_min: ArrayList(usize) = .empty;
             defer que_min.deinit(self.allocator);
             var que = std.PriorityQueue(Q, void, Q.lessThan).init(allocator, {});
             defer que.deinit();

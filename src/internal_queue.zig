@@ -14,7 +14,7 @@ pub fn SimpleQueue(comptime T: type) type {
         pub fn init(allocator: Allocator) Self {
             return Self{
                 .allocator = allocator,
-                .payload = .{},
+                .payload = .empty,
                 .pos = 0,
             };
         }

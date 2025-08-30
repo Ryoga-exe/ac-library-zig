@@ -26,7 +26,7 @@ allocator: Allocator,
 pub fn init(allocator: Allocator, n: usize) SccGraph {
     const self = SccGraph{
         .n = n,
-        .edges = .{},
+        .edges = .empty,
         .allocator = allocator,
     };
     return self;
