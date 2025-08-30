@@ -14,7 +14,7 @@ pub fn SimpleQueue(comptime T: type) type {
         pub fn init(allocator: Allocator) Self {
             return Self{
                 .allocator = allocator,
-                .payload = .init(allocator),
+                .payload = .empty,
                 .pos = 0,
             };
         }
@@ -28,7 +28,7 @@ pub fn SimpleQueue(comptime T: type) type {
         }
 
         pub fn deinit(self: *Self) void {
-            self.payload.deinit();
+            self.payload.deinit(self.allocator);
         }
 
         pub fn size(self: Self) usize {
@@ -40,7 +40,7 @@ pub fn SimpleQueue(comptime T: type) type {
         }
 
         pub fn push(self: *Self, t: T) Allocator.Error!void {
-            return self.payload.append(t);
+            return self.payload.append(self.allocator, t);
         }
 
         pub fn pushAssumeCapacity(self: *Self, t: T) void {
@@ -55,7 +55,7 @@ pub fn SimpleQueue(comptime T: type) type {
         }
 
         pub fn clearAndFree(self: *Self) void {
-            self.payload.clearAndFree();
+            self.payload.clearAndFree(self.allocator);
             self.pos = 0;
         }
 

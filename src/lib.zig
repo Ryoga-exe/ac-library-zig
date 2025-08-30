@@ -17,8 +17,20 @@ pub const Modint998244353 = @import("modint.zig").Modint998244353;
 pub const DynamicModint = @import("modint.zig").DynamicModint;
 pub const Modint = @import("modint.zig").Modint;
 
-pub usingnamespace @import("math.zig");
-pub usingnamespace @import("string.zig");
+pub const math = @import("math.zig");
+pub const powMod = math.powMod;
+pub const invMod = math.invMod;
+pub const crt = math.crt;
+pub const floorSum = math.floorSum;
+
+pub const string = @import("string.zig");
+pub const suffixArrayManual = string.suffixArrayManual;
+pub const suffixArrayArbitrary = string.suffixArrayArbitrary;
+pub const suffixArray = string.suffixArray;
+pub const lcpArrayArbitrary = string.lcpArrayArbitrary;
+pub const lcpArray = string.lcpArray;
+pub const zAlgorithmArbitrary = string.zAlgorithmArbitrary;
+pub const zAlgorithm = string.zAlgorithm;
 
 test {
     std.testing.refAllDecls(@This());

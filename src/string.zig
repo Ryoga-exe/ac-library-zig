@@ -2,6 +2,7 @@
 
 const std = @import("std");
 const Allocator = std.mem.Allocator;
+const ArrayList = std.ArrayList;
 const assert = std.debug.assert;
 
 fn saNaive(comptime T: type, allocator: Allocator, s: []const T) Allocator.Error![]usize {
@@ -214,8 +215,8 @@ fn saIs(comptime threshold: Threshold, allocator: Allocator, s: []const usize, u
             m += 1;
         }
     }
-    var lms = try std.ArrayList(usize).initCapacity(allocator, m);
-    defer lms.deinit();
+    var lms = try ArrayList(usize).initCapacity(allocator, m);
+    defer lms.deinit(allocator);
     for (1..n) |i| {
         if (!ls[i - 1] and ls[i]) {
             lms.appendAssumeCapacity(i);
@@ -225,8 +226,8 @@ fn saIs(comptime threshold: Threshold, allocator: Allocator, s: []const usize, u
     try induce.f(context, sa, lms.items);
 
     if (m > 0) {
-        var sorted_lms = try std.ArrayList(usize).initCapacity(allocator, m);
-        defer sorted_lms.deinit();
+        var sorted_lms = try ArrayList(usize).initCapacity(allocator, m);
+        defer sorted_lms.deinit(allocator);
         for (sa) |v| {
             if (lms_map[v - 1] != 0) {
                 sorted_lms.appendAssumeCapacity(v - 1);

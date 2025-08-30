@@ -71,14 +71,14 @@ pub fn McfGraph(comptime Cap: type, comptime Cost: type) type {
         pub fn init(allocator: Allocator, n: usize) Self {
             return Self{
                 .allocator = allocator,
-                .edges = .init(allocator),
+                .edges = .empty,
                 .n = n,
             };
         }
 
         /// Release all allocated memory.
         pub fn deinit(self: *Self) void {
-            self.edges.deinit();
+            self.edges.deinit(self.allocator);
         }
 
         /// Adds an edge oriented from `from` to `to` with capacity `cap` and cost `cost`.
@@ -105,7 +105,7 @@ pub fn McfGraph(comptime Cap: type, comptime Cost: type) type {
             assert(0 <= cap);
             assert(0 <= cost);
             const m = self.edges.items.len;
-            try self.edges.append(Edge{
+            try self.edges.append(self.allocator, Edge{
                 .from = from,
                 .to = to,
                 .cap = cap,
@@ -264,7 +264,7 @@ pub fn McfGraph(comptime Cap: type, comptime Cost: type) type {
                 defer allocator.free(redge_idx);
 
                 var elist = try ArrayList(struct { usize, InsideEdge }).initCapacity(allocator, 2 * m);
-                defer elist.deinit();
+                defer elist.deinit(self.allocator);
                 for (0..m) |i| {
                     const e = self.edges.items[i];
                     edge_idx[i] = degree[e.from];
@@ -290,7 +290,7 @@ pub fn McfGraph(comptime Cap: type, comptime Cost: type) type {
                         },
                     });
                 }
-                var g = try internal.Csr(InsideEdge).init(allocator, n, elist, .zero);
+                var g = try internal.Csr(InsideEdge).init(allocator, n, elist.items, .zero);
                 for (0..m) |i| {
                     const e = self.edges.items[i];
                     edge_idx[i] += g.start[e.from];
@@ -315,8 +315,8 @@ pub fn McfGraph(comptime Cap: type, comptime Cost: type) type {
                 var flow_current: Cap = 0;
                 var cost_current: Cost = 0;
                 var prev_cost_per_flow: Cost = -1;
-                var result = ArrayList(CapCostPair).init(allocator);
-                try result.append(CapCostPair{ 0, 0 });
+                var result: ArrayList(CapCostPair) = .empty;
+                try result.append(self.allocator, CapCostPair{ 0, 0 });
                 while (flow_current < flow_limit) {
                     if (!try self.refineDual(s, t, g, dual_dist, vis, prev_e)) {
                         break;
@@ -338,11 +338,11 @@ pub fn McfGraph(comptime Cap: type, comptime Cost: type) type {
                     if (prev_cost_per_flow == d) {
                         _ = result.pop();
                     }
-                    try result.append(CapCostPair{ flow_current, cost_current });
+                    try result.append(self.allocator, CapCostPair{ flow_current, cost_current });
                     prev_cost_per_flow = d;
                 }
 
-                break :blk try result.toOwnedSlice();
+                break :blk try result.toOwnedSlice(self.allocator);
             };
 
             for (0..m) |i| {
@@ -390,13 +390,13 @@ pub fn McfGraph(comptime Cap: type, comptime Cost: type) type {
                     return math.order(a.key, b.key);
                 }
             };
-            var que_min = ArrayList(usize).init(allocator);
-            defer que_min.deinit();
+            var que_min: ArrayList(usize) = .empty;
+            defer que_min.deinit(self.allocator);
             var que = std.PriorityQueue(Q, void, Q.lessThan).init(allocator, {});
             defer que.deinit();
 
             dual[s].@"1" = 0;
-            try que_min.append(s);
+            try que_min.append(self.allocator, s);
             while (que.count() > 0 or que_min.items.len > 0) {
                 const v = que_min.pop() orelse que.remove().to;
                 if (vis[v]) {
@@ -418,7 +418,7 @@ pub fn McfGraph(comptime Cap: type, comptime Cost: type) type {
                         dual[e.to].@"1" = dist_to;
                         prev_e[e.to] = e.rev;
                         if (dist_to == dist_v) {
-                            try que_min.append(e.to);
+                            try que_min.append(self.allocator, e.to);
                         } else {
                             try que.add(Q{ .key = dist_to, .to = e.to });
                         }
