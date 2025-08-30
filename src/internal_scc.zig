@@ -42,7 +42,7 @@ pub fn addEdge(self: *SccGraph, from: usize, to: usize) !void {
 }
 pub fn sccIds(self: SccGraph) !struct { usize, []usize } {
     var env = Env{
-        .g = try .init(self.allocator, self.n, self.edges, Edge{ .to = 0 }),
+        .g = try .init(self.allocator, self.n, self.edges.items, Edge{ .to = 0 }),
         .now_ord = 0,
         .group_num = 0,
         .visited = try .initCapacity(self.allocator, self.n),
@@ -83,7 +83,7 @@ pub fn scc(self: SccGraph) !Groups {
     for (0..self.n) |i| {
         group_index[i] = ids[i];
     }
-    return try Groups.init(self.allocator, group_num, group_index);
+    return try .init(self.allocator, group_num, group_index);
 }
 fn dfs(allocator: Allocator, v: usize, n: usize, env: *Env) !void {
     env.low[v] = env.now_ord;

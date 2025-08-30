@@ -1,5 +1,6 @@
 const std = @import("std");
 const Allocator = std.mem.Allocator;
+const ArrayList = std.ArrayList;
 
 pub fn Csr(comptime E: type) type {
     return struct {
@@ -9,15 +10,15 @@ pub fn Csr(comptime E: type) type {
         elist: []E,
         allocator: Allocator,
 
-        pub fn init(allocator: Allocator, n: usize, edges: std.ArrayList(struct { usize, E }), initialValue: E) !Self {
+        pub fn init(allocator: Allocator, n: usize, edges: []struct { usize, E }, initialValue: E) !Self {
             const self = Self{
                 .start = try allocator.alloc(usize, n + 1),
-                .elist = try allocator.alloc(E, edges.items.len),
+                .elist = try allocator.alloc(E, edges.len),
                 .allocator = allocator,
             };
             @memset(self.start, 0);
             @memset(self.elist, initialValue);
-            for (edges.items) |e| {
+            for (edges) |e| {
                 self.start[e.@"0" + 1] += 1;
             }
             for (1..n + 1) |i| {
@@ -26,7 +27,7 @@ pub fn Csr(comptime E: type) type {
             var counter = try allocator.alloc(usize, n + 1);
             defer allocator.free(counter);
             @memcpy(counter, self.start);
-            for (edges.items) |e| {
+            for (edges) |e| {
                 self.elist[counter[e.@"0"]] = e.@"1";
                 counter[e.@"0"] += 1;
             }
