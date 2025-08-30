@@ -73,21 +73,21 @@ pub fn MfGraph(comptime Cap: type) type {
         pub fn init(allocator: Allocator, n: usize) Allocator.Error!Self {
             const g = try allocator.alloc(Graph, n);
             for (g) |*item| {
-                item.* = .init(allocator);
+                item.* = .empty;
             }
             return Self{
                 .allocator = allocator,
                 .n = n,
-                .pos = .init(allocator),
+                .pos = .empty,
                 .g = g,
             };
         }
 
         /// Release all allocated memory.
-        pub fn deinit(self: Self) void {
-            self.pos.deinit();
-            for (self.g) |item| {
-                item.deinit();
+        pub fn deinit(self: *Self) void {
+            self.pos.deinit(self.allocator);
+            for (self.g) |*item| {
+                item.deinit(self.allocator);
             }
             self.allocator.free(self.g);
         }
@@ -114,11 +114,11 @@ pub fn MfGraph(comptime Cap: type) type {
             assert(to < self.n);
             assert(0 <= cap);
             const m = self.pos.items.len;
-            try self.pos.append(.{ from, self.g[from].items.len });
+            try self.pos.append(self.allocator, .{ from, self.g[from].items.len });
             const rev = self.g[to].items.len + @intFromBool(from == to);
-            try self.g[from].append(InternalEdge{ .to = to, .rev = rev, .cap = cap });
+            try self.g[from].append(self.allocator, InternalEdge{ .to = to, .rev = rev, .cap = cap });
             const rev2 = self.g[from].items.len - 1;
-            try self.g[to].append(InternalEdge{
+            try self.g[to].append(self.allocator, InternalEdge{
                 .to = from,
                 .rev = rev2,
                 .cap = 0,
