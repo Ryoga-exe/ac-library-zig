@@ -2,6 +2,7 @@ const std = @import("std");
 const Csr = @import("internal_csr.zig").Csr;
 const Groups = @import("internal_groups.zig");
 const Allocator = std.mem.Allocator;
+const ArrayList = std.ArrayList;
 
 const SccGraph = @This();
 
@@ -12,39 +13,39 @@ const Env = struct {
     g: Csr(Edge),
     now_ord: usize,
     group_num: usize,
-    visited: std.ArrayList(usize),
+    visited: ArrayList(usize),
     low: []usize,
     ord: []?usize,
     ids: []usize,
 };
 
 n: usize,
-edges: std.ArrayList(struct { usize, Edge }),
+edges: ArrayList(struct { usize, Edge }),
 allocator: Allocator,
 
 pub fn init(allocator: Allocator, n: usize) SccGraph {
     const self = SccGraph{
         .n = n,
-        .edges = std.ArrayList(struct { usize, Edge }).init(allocator),
+        .edges = .{},
         .allocator = allocator,
     };
     return self;
 }
 pub fn deinit(self: *SccGraph) void {
-    self.edges.deinit();
+    self.edges.deinit(self.allocator);
 }
 pub fn numVertices(self: SccGraph) usize {
     return self.n;
 }
 pub fn addEdge(self: *SccGraph, from: usize, to: usize) !void {
-    try self.edges.append(.{ from, Edge{ .to = to } });
+    try self.edges.append(self.allocator, .{ from, Edge{ .to = to } });
 }
 pub fn sccIds(self: SccGraph) !struct { usize, []usize } {
     var env = Env{
-        .g = try Csr(Edge).init(self.allocator, self.n, self.edges, Edge{ .to = 0 }),
+        .g = try .init(self.allocator, self.n, self.edges, Edge{ .to = 0 }),
         .now_ord = 0,
         .group_num = 0,
-        .visited = try std.ArrayList(usize).initCapacity(self.allocator, self.n),
+        .visited = try .initCapacity(self.allocator, self.n),
         .low = try self.allocator.alloc(usize, self.n),
         .ord = try self.allocator.alloc(?usize, self.n),
         .ids = try self.allocator.alloc(usize, self.n),
@@ -56,7 +57,7 @@ pub fn sccIds(self: SccGraph) !struct { usize, []usize } {
 
     defer {
         env.g.deinit();
-        env.visited.deinit();
+        env.visited.deinit(self.allocator);
         self.allocator.free(env.low);
         self.allocator.free(env.ord);
         self.allocator.free(env.ids);
@@ -64,7 +65,7 @@ pub fn sccIds(self: SccGraph) !struct { usize, []usize } {
 
     for (0..self.n) |i| {
         if (env.ord[i] == null) {
-            try dfs(i, self.n, &env);
+            try dfs(self.allocator, i, self.n, &env);
         }
     }
     for (0..self.n) |i| {
@@ -84,18 +85,18 @@ pub fn scc(self: SccGraph) !Groups {
     }
     return try Groups.init(self.allocator, group_num, group_index);
 }
-fn dfs(v: usize, n: usize, env: *Env) !void {
+fn dfs(allocator: Allocator, v: usize, n: usize, env: *Env) !void {
     env.low[v] = env.now_ord;
     env.ord[v] = env.now_ord;
     env.now_ord += 1;
-    try env.visited.append(v);
+    try env.visited.append(allocator, v);
 
     for (env.g.start[v]..env.g.start[v + 1]) |i| {
         const to = env.g.elist[i].to;
         if (env.ord[to]) |ord| {
             env.low[v] = @min(env.low[v], ord);
         } else {
-            try dfs(to, n, env);
+            try dfs(allocator, to, n, env);
             env.low[v] = @min(env.low[v], env.low[to]);
         }
     }
