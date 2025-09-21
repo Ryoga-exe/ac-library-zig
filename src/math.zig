@@ -92,9 +92,9 @@ test powMod {
 /// - $O(\log m)$
 pub fn invMod(x: i64, m: i64) i64 {
     assert(1 <= m);
-    const z = internal.invGcd(x, m);
-    assert(z.@"0" == 1);
-    return z.@"1";
+    const z0, const z1 = internal.invGcd(x, m);
+    assert(z0 == 1);
+    return z1;
 }
 
 test invMod {
@@ -165,9 +165,7 @@ pub fn crt(r: []const i64, m: []const i64) struct { i64, i64 } {
         // -> x = (ri - r0) / g * inv(u0) (mod u1)
 
         // im = inv(u0) (mod u1) (0 <= im < u1)
-        const gim = internal.invGcd(m0, mi);
-        const g = gim.@"0";
-        const im = gim.@"1";
+        const g, const im = internal.invGcd(m0, mi);
         const ui = @divFloor(mi, g);
         // |ri - r0| < (m0 + mi) <= lcm(m0, mi)
         if (@mod(ri - r0, g) != 0) {
@@ -210,11 +208,11 @@ test crt {
     };
 
     for (tests) |t| {
-        const expected = t.expected;
-        const result = crt(t.a, t.b);
+        const expected_a, const expected_b = t.expected;
+        const result_a, const result_b = crt(t.a, t.b);
 
-        try std.testing.expectEqual(expected.@"0", result.@"0");
-        try std.testing.expectEqual(expected.@"1", result.@"1");
+        try std.testing.expectEqual(expected_a, result_a);
+        try std.testing.expectEqual(expected_b, result_b);
     }
 }
 
