@@ -54,7 +54,7 @@ pub fn convolutionModInt(comptime mod: u32, allocator: Allocator, a: []const Mod
     }
 
     // convolutionFFT
-    const z = std.math.ceilPowerOfTwo(usize, n + m - 1);
+    const z = try std.math.ceilPowerOfTwo(usize, n + m - 1);
     assert(@mod(mod - 1, z) == 0);
 
     var a_tmp = try allocator.alloc(Mint, z);
@@ -86,4 +86,27 @@ pub fn convolutionI64(allocator: Allocator, a: []const i64, b: []const i64) ![]i
     _ = allocator; // autofix
     _ = a; // autofix
     _ = b; // autofix
+}
+
+const testing = std.testing;
+const expectEqual = testing.expectEqual;
+const expectEqualSlices = testing.expectEqualSlices;
+
+// https://github.com/atcoder/ac-library/blob/8250de484ae0ab597391db58040a602e0dc1a419/test/unittest/convolution_test.cpp#L51-L71
+test "empty" {
+    var arena = std.heap.ArenaAllocator.init(testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
+
+    const mod = 998244353;
+    const Mint = Modint(mod);
+    try expectEqual((try convolution(mod, i32, allocator, &.{}, &.{})).len, 0);
+    try expectEqual((try convolution(mod, i32, allocator, &.{}, &.{ 1, 2 })).len, 0);
+    try expectEqual((try convolution(mod, i32, allocator, &.{ 1, 2 }, &.{})).len, 0);
+    try expectEqual((try convolution(mod, i32, allocator, &.{1}, &.{})).len, 0);
+    try expectEqual((try convolution(mod, i64, allocator, &.{}, &.{})).len, 0);
+    try expectEqual((try convolution(mod, i64, allocator, &.{}, &.{ 1, 2 })).len, 0);
+    try expectEqual((try convolutionModInt(mod, allocator, &.{}, &.{})).len, 0);
+    try expectEqual((try convolutionModInt(mod, allocator, &.{}, &.{ Mint.init(1), Mint.init(2) })).len, 0);
+    try expectEqual((try convolutionModInt(mod, allocator, &.{ Mint.init(1), Mint.init(2) }, &.{})).len, 0);
 }
