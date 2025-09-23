@@ -184,10 +184,11 @@ fn convolutionNaiveModint(comptime mod: u32, allocator: Allocator, a: []const Mo
     const m = b.len;
 
     var ans = try allocator.alloc(Mint, n + m - 1);
+    @memset(ans, Mint.raw(0));
     for (0..m) |j| {
         for (0..n) |i| {
             // ans[i + j] += a[i] * b[j];
-            ans[i + j].addAsg(a[i].mul(b[i]));
+            ans[i + j].addAsg(a[i].mul(b[j]));
         }
     }
     return ans;
