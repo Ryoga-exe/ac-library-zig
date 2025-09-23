@@ -3,6 +3,8 @@ const Allocator = std.mem.Allocator;
 const Modint = @import("modint.zig").StaticModint;
 const assert = std.debug.assert;
 
+const internal = @import("internal_math.zig");
+
 pub fn convolution(comptime mod: u32, comptime T: type, allocator: Allocator, a: []const T, b: []const T) ![]T {
     const Mint = Modint(mod);
     const n = a.len;
@@ -59,8 +61,8 @@ pub fn convolutionModint(comptime mod: u32, allocator: Allocator, a: []const Mod
     @memcpy(b_tmp[0..m], b);
     @memset(b_tmp[m..], Mint.raw(0));
 
-    // butterfly(&a_tmp)
-    // butterfly(&b_tmp)
+    butterfly(mod, a_tmp);
+    butterfly(mod, b_tmp);
     for (a_tmp, b_tmp) |*ai, bi| {
         ai.* = ai.mul(bi);
     }
@@ -81,6 +83,71 @@ pub fn convolutionI64(allocator: Allocator, a: []const i64, b: []const i64) ![]i
 }
 
 // internal
+fn prepareFFT(comptime mod: u32) struct {
+    sum_e: [30]Modint(mod),
+    sum_ie: [30]Modint(mod),
+} {
+    const Mint = Modint(mod);
+    var sum_e = [_]Mint{Mint.raw(0)} ** 30;
+    var sum_ie = [_]Mint{Mint.raw(0)} ** 30;
+
+    const g = Mint.raw(internal.comptimePrimitiveRoot(mod));
+    const cnt2: usize = @intCast(@ctz(mod - 1));
+    var e = g.pow((mod - 1) >> @intCast(cnt2));
+    var ie = e.inv();
+
+    var i: isize = @as(isize, @intCast(cnt2)) - 2;
+    while (i >= 0) : (i -= 1) {
+        const idx: usize = @intCast(i);
+        if (idx < 30) {
+            sum_e[idx] = e;
+            sum_ie[idx] = ie;
+        }
+        e.mulAsg(e);
+        ie.mulAsg(ie);
+    }
+
+    // prefix product
+    var acc = Mint.raw(1);
+    for (0..30) |j| {
+        acc.mulAsg(sum_e[j]);
+        sum_e[j] = acc;
+    }
+    acc = Mint.raw(1);
+    for (0..30) |j| {
+        acc.mulAsg(sum_ie[j]);
+        sum_ie[j] = acc;
+    }
+
+    return .{ .sum_e = sum_e, .sum_ie = sum_ie };
+}
+
+fn butterfly(comptime mod: u32, a: []Modint(mod)) void {
+    const Mint = Modint(mod);
+    const n = a.len;
+    const h = std.math.log2_int_ceil(usize, n);
+    const prep = prepareFFT(mod);
+    const sum_e = prep.sum_e;
+
+    for (1..h + 1) |ph| {
+        const w: usize = @as(usize, 1) << @truncate(ph - 1);
+        const p: usize = @as(usize, 1) << @truncate(h - ph);
+        var now = Mint.raw(1);
+        for (0..w) |s| {
+            const offset = s << @truncate(h - ph + 1);
+            for (0..p) |i| {
+                const l = a[i + offset];
+                const r = a[i + offset + p].mul(now);
+                a[i + offset] = l.add(r);
+                a[i + offset + p] = l.sub(r);
+            }
+            const idx = 0; // TODO:
+            // idx is always < 30 for our moduli; also sum_e pre-filled with 1.
+            now.mulAsg(sum_e[idx]);
+        }
+    }
+}
+
 fn convolutionNaiveModint(comptime mod: u32, allocator: Allocator, a: []const Modint(mod), b: []const Modint(mod)) ![]Modint(mod) {
     const Mint = Modint(mod);
     const n = a.len;
