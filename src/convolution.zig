@@ -245,5 +245,41 @@ test "convolution test: mid" {
         elem.* = Mint.init(rand.intRangeAtMost(u32, 0, mod - 1));
     }
 
-    try expectEqualSlices(Mint, try convolutionNaiveModint(mod, allocator, a, b), try convolutionModint(mod, allocator, a, b));
+    try expectEqualSlices(
+        Mint,
+        try convolutionNaiveModint(mod, allocator, a, b),
+        try convolutionModint(mod, allocator, a, b),
+    );
+}
+
+// https://github.com/atcoder/ac-library/blob/8250de484ae0ab597391db58040a602e0dc1a419/test/unittest/convolution_test.cpp#L87-L118
+test "convolution test: simple s mod" {
+    var arena = std.heap.ArenaAllocator.init(testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
+
+    const rand = std.crypto.random;
+
+    inline for (.{ 998_244_353, 924_844_033 }) |mod| {
+        const Mint = Modint(mod);
+        for (1..20) |n| {
+            for (1..20) |m| {
+                const a = try allocator.alloc(Mint, n);
+                const b = try allocator.alloc(Mint, m);
+
+                for (a) |*elem| {
+                    elem.* = Mint.init(rand.intRangeAtMost(u32, 0, mod - 1));
+                }
+                for (b) |*elem| {
+                    elem.* = Mint.init(rand.intRangeAtMost(u32, 0, mod - 1));
+                }
+
+                try expectEqualSlices(
+                    Mint,
+                    try convolutionNaiveModint(mod, allocator, a, b),
+                    try convolutionModint(mod, allocator, a, b),
+                );
+            }
+        }
+    }
 }
