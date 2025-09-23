@@ -80,10 +80,63 @@ pub fn convolutionModint(comptime mod: u32, allocator: Allocator, a: []const Mod
 
 // TODO: add doc comment
 pub fn convolutionI64(allocator: Allocator, a: []const i64, b: []const i64) ![]i64 {
-    _ = allocator; // autofix
-    _ = a; // autofix
-    _ = b; // autofix
-    // TODO: implement
+    const n = a.len;
+    const m = b.len;
+    if (n == 0 or m == 0) {
+        return allocator.alloc(i64, 0);
+    }
+
+    const m1: u64 = 754_974_721; // 2^24 * 45 + 1
+    const m2: u64 = 167_772_161; // 2^25 * 5 + 1
+    const m3: u64 = 469_762_049; // 2^26 * 7 + 1
+    const m2m3: u64 = m2 * m3;
+    const m1m3: u64 = m1 * m3;
+    const m1m2: u64 = m1 * m2;
+    const m1m2m3: u64 = m1m2 *% m3;
+
+    const inv1 = internal.invGcd(m2m3, m1).@"1";
+    const inv2 = internal.invGcd(m1m3, m2).@"1";
+    const inv3 = internal.invGcd(m1m2, m3).@"1";
+
+    const c1 = try convolution(m1, i64, allocator, a, b);
+    defer allocator.free(c1);
+    const c2 = try convolution(m2, i64, allocator, a, b);
+    defer allocator.free(c2);
+    const c3 = try convolution(m3, i64, allocator, a, b);
+    defer allocator.free(c3);
+
+    var c = try allocator.alloc(i64, n + m - 1);
+    for (0..c.len) |i| {
+        var x: u64 = 0;
+        x +%= @as(u64, @bitCast(@rem((c1[i] *% inv1), m1))) *% m2m3;
+        x +%= @as(u64, @bitCast(@rem((c2[i] *% inv2), m2))) *% m1m3;
+        x +%= @as(u64, @bitCast(@rem((c3[i] *% inv3), m3))) *% m1m2;
+        // B = 2^63, -B <= x, r(real value) < B
+        // (x, x - M, x - 2M, or x - 3M) = r (mod 2B)
+        // r = c1[i] (mod MOD1)
+        // focus on MOD1
+        // r = x, x - M', x - 2M', x - 3M' (M' = M % 2^64) (mod 2B)
+        // r = x,
+        //     x - M' + (0 or 2B),
+        //     x - 2M' + (0, 2B or 4B),
+        //     x - 3M' + (0, 2B, 4B or 6B) (without mod!)
+        // (r - x) = 0, (0)
+        //           - M' + (0 or 2B), (1)
+        //           -2M' + (0 or 2B or 4B), (2)
+        //           -3M' + (0 or 2B or 4B or 6B) (3) (mod MOD1)
+        // we checked that
+        //   ((1) mod MOD1) mod 5 = 2
+        //   ((2) mod MOD1) mod 5 = 3
+        //   ((3) mod MOD1) mod 5 = 4
+        var diff: i64 = c1[i] - @as(i64, @intCast(@mod(x, m1)));
+        if (diff < 0) {
+            diff += m1;
+        }
+        const offset = [5]u64{ 0, 0, m1m2m3, 2 * m1m2m3, 3 * m1m2m3 };
+        x -%= offset[@intCast(@mod(diff, 5))];
+        c[i] = @bitCast(x);
+    }
+    return c;
 }
 
 // internal
