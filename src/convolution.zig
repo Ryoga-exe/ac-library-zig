@@ -194,6 +194,22 @@ fn convolutionNaiveModint(comptime mod: u32, allocator: Allocator, a: []const Mo
     return ans;
 }
 
+fn convolutionNaive(comptime mod: u32, comptime T: type, allocator: Allocator, a: []const T, b: []const T) ![]T {
+    const n = a.len;
+    const m = b.len;
+    var ans = try allocator.alloc(T, n + m - 1);
+    @memset(ans, 0);
+    for (0..m) |j| {
+        for (0..n) |i| {
+            ans[i + j] += @intCast(std.math.comptimeMod(std.math.mulWide(T, a[i], b[j]), mod));
+            if (ans[i + j] >= mod) {
+                ans[i + j] -= mod;
+            }
+        }
+    }
+    return ans;
+}
+
 fn trailingZerosOfNot(s: usize) u32 {
     return @ctz(~s);
 }
@@ -278,6 +294,66 @@ test "convolution test: simple s mod" {
                     Mint,
                     try convolutionNaiveModint(mod, allocator, a, b),
                     try convolutionModint(mod, allocator, a, b),
+                );
+            }
+        }
+    }
+}
+
+// https://github.com/atcoder/ac-library/blob/8250de484ae0ab597391db58040a602e0dc1a419/test/unittest/convolution_test.cpp#L120-L150
+test "convolution test: simple i32" {
+    try simpleTest(i32);
+}
+
+// https://github.com/atcoder/ac-library/blob/8250de484ae0ab597391db58040a602e0dc1a419/test/unittest/convolution_test.cpp#L152-L182
+test "convolution test: simple u32" {
+    try simpleTest(u32);
+}
+
+// https://github.com/atcoder/ac-library/blob/8250de484ae0ab597391db58040a602e0dc1a419/test/unittest/convolution_test.cpp#L184-L214
+test "convolution test: simple i64" {
+    try simpleTest(i64);
+}
+
+// https://github.com/atcoder/ac-library/blob/8250de484ae0ab597391db58040a602e0dc1a419/test/unittest/convolution_test.cpp#L216-L246
+test "convolution test: simple u64" {
+    try simpleTest(u64);
+}
+
+// https://github.com/atcoder/ac-library/blob/8250de484ae0ab597391db58040a602e0dc1a419/test/unittest/convolution_test.cpp#L249-L279
+test "convolution test: simple i128" {
+    try simpleTest(i128);
+}
+
+// https://github.com/atcoder/ac-library/blob/8250de484ae0ab597391db58040a602e0dc1a419/test/unittest/convolution_test.cpp#L281-L311
+test "convolution test: simple u128" {
+    try simpleTest(u128);
+}
+
+fn simpleTest(T: type) !void {
+    var arena = std.heap.ArenaAllocator.init(testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
+
+    const rand = std.crypto.random;
+
+    inline for (.{ 998_244_353, 924_844_033 }) |mod| {
+        for (1..20) |n| {
+            for (1..20) |m| {
+                const a = try allocator.alloc(T, n);
+                const b = try allocator.alloc(T, m);
+
+                for (a) |*elem| {
+                    elem.* = rand.intRangeAtMost(T, 0, mod - 1);
+                }
+                for (b) |*elem| {
+                    elem.* = rand.intRangeAtMost(T, 0, mod - 1);
+                }
+
+                try expectEqualSlices(
+                    T,
+                    try convolutionNaive(mod, T, allocator, a, b),
+                    try convolution(mod, T, allocator, a, b),
                 );
             }
         }
