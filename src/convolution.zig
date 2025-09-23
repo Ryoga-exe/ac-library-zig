@@ -130,8 +130,7 @@ fn butterfly(comptime mod: u32, a: []Modint(mod)) void {
     const Mint = Modint(mod);
     const n = a.len;
     const h = std.math.log2_int_ceil(usize, n);
-    const prep = prepareFFT(mod);
-    const sum_e = prep.sum_e;
+    const sum_e = prepareFFT(mod).sum_e;
 
     for (1..h + 1) |ph| {
         const w: usize = @as(usize, 1) << @truncate(ph - 1);
@@ -156,8 +155,7 @@ fn butterflyInv(comptime mod: u32, a: []Modint(mod)) void {
     const Mint = Modint(mod);
     const n = a.len;
     const h = std.math.log2_int_ceil(usize, n);
-    const prep = prepareFFT(mod);
-    const sum_ie = prep.sum_ie;
+    const sum_ie = prepareFFT(mod).sum_ie;
 
     var phi: isize = @intCast(h);
     while (phi >= 1) : (phi -= 1) {
