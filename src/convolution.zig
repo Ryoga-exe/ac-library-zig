@@ -23,7 +23,7 @@ pub fn convolution(comptime mod: u32, comptime T: type, allocator: Allocator, a:
         b_tmp[i] = Mint.init(x);
     }
 
-    const c_mi = try convolutionModInt(mod, allocator, a_tmp, b_tmp);
+    const c_mi = try convolutionModint(mod, allocator, a_tmp, b_tmp);
     defer allocator.free(c_mi);
 
     var out = try allocator.alloc(T, c_mi.len);
@@ -33,7 +33,7 @@ pub fn convolution(comptime mod: u32, comptime T: type, allocator: Allocator, a:
     return out;
 }
 
-pub fn convolutionModInt(comptime mod: u32, allocator: Allocator, a: []const Modint(mod), b: []const Modint(mod)) ![]Modint(mod) {
+pub fn convolutionModint(comptime mod: u32, allocator: Allocator, a: []const Modint(mod), b: []const Modint(mod)) ![]Modint(mod) {
     const Mint = Modint(mod);
     const n = a.len;
     const m = b.len;
@@ -42,15 +42,7 @@ pub fn convolutionModInt(comptime mod: u32, allocator: Allocator, a: []const Mod
     }
 
     if (@min(n, m) <= 60) {
-        // convolutionNaive
-        var ans = try allocator.alloc(Mint, n + m - 1);
-        for (0..m) |j| {
-            for (0..n) |i| {
-                // ans[i + j] += a[i] * b[j];
-                ans[i + j].addAsg(a[i].mul(b[i]));
-            }
-        }
-        return ans;
+        return convolutionNaiveModint(mod, allocator, a, b);
     }
 
     // convolutionFFT
@@ -88,12 +80,28 @@ pub fn convolutionI64(allocator: Allocator, a: []const i64, b: []const i64) ![]i
     _ = b; // autofix
 }
 
+// internal
+fn convolutionNaiveModint(comptime mod: u32, allocator: Allocator, a: []const Modint(mod), b: []const Modint(mod)) ![]Modint(mod) {
+    const Mint = Modint(mod);
+    const n = a.len;
+    const m = b.len;
+
+    var ans = try allocator.alloc(Mint, n + m - 1);
+    for (0..m) |j| {
+        for (0..n) |i| {
+            // ans[i + j] += a[i] * b[j];
+            ans[i + j].addAsg(a[i].mul(b[i]));
+        }
+    }
+    return ans;
+}
+
 const testing = std.testing;
 const expectEqual = testing.expectEqual;
 const expectEqualSlices = testing.expectEqualSlices;
 
 // https://github.com/atcoder/ac-library/blob/8250de484ae0ab597391db58040a602e0dc1a419/test/unittest/convolution_test.cpp#L51-L71
-test "empty" {
+test "convolution test: empty" {
     var arena = std.heap.ArenaAllocator.init(testing.allocator);
     defer arena.deinit();
     const allocator = arena.allocator();
@@ -106,7 +114,34 @@ test "empty" {
     try expectEqual((try convolution(mod, i32, allocator, &.{1}, &.{})).len, 0);
     try expectEqual((try convolution(mod, i64, allocator, &.{}, &.{})).len, 0);
     try expectEqual((try convolution(mod, i64, allocator, &.{}, &.{ 1, 2 })).len, 0);
-    try expectEqual((try convolutionModInt(mod, allocator, &.{}, &.{})).len, 0);
-    try expectEqual((try convolutionModInt(mod, allocator, &.{}, &.{ Mint.init(1), Mint.init(2) })).len, 0);
-    try expectEqual((try convolutionModInt(mod, allocator, &.{ Mint.init(1), Mint.init(2) }, &.{})).len, 0);
+    try expectEqual((try convolutionModint(mod, allocator, &.{}, &.{})).len, 0);
+    try expectEqual((try convolutionModint(mod, allocator, &.{}, &.{ Mint.init(1), Mint.init(2) })).len, 0);
+    try expectEqual((try convolutionModint(mod, allocator, &.{ Mint.init(1), Mint.init(2) }, &.{})).len, 0);
+}
+
+// https://github.com/atcoder/ac-library/blob/8250de484ae0ab597391db58040a602e0dc1a419/test/unittest/convolution_test.cpp#L73-L85
+test "convolution test: mid" {
+    var arena = std.heap.ArenaAllocator.init(testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
+
+    const n: usize = 1234;
+    const m: usize = 2345;
+
+    const mod = 998244353;
+    const Mint = Modint(mod);
+
+    const rand = std.crypto.random;
+    const a = try allocator.alloc(Mint, n);
+    const b = try allocator.alloc(Mint, m);
+    defer allocator.free(b);
+
+    for (a) |*elem| {
+        elem.* = Mint.init(rand.intRangeAtMost(u32, 0, mod - 1));
+    }
+    for (b) |*elem| {
+        elem.* = Mint.init(rand.intRangeAtMost(u32, 0, mod - 1));
+    }
+
+    try expectEqualSlices(Mint, try convolutionNaiveModint(mod, allocator, a, b), try convolutionModint(mod, allocator, a, b));
 }
