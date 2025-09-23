@@ -66,7 +66,7 @@ pub fn convolutionModint(comptime mod: u32, allocator: Allocator, a: []const Mod
     for (a_tmp, b_tmp) |*ai, bi| {
         ai.* = ai.mul(bi);
     }
-    // butterflyInv(&a_tmp)
+    butterflyInv(mod, a_tmp);
 
     a_tmp = try allocator.realloc(a_tmp, n + m - 1);
     const iz = Mint.init(z).inv();
@@ -80,6 +80,7 @@ pub fn convolutionI64(allocator: Allocator, a: []const i64, b: []const i64) ![]i
     _ = allocator; // autofix
     _ = a; // autofix
     _ = b; // autofix
+    // TODO: implement
 }
 
 // internal
@@ -141,9 +142,38 @@ fn butterfly(comptime mod: u32, a: []Modint(mod)) void {
                 a[i + offset] = l.add(r);
                 a[i + offset + p] = l.sub(r);
             }
-            const idx = 0; // TODO:
+            const idx = trailingZerosOfNot(s);
             // idx is always < 30 for our moduli; also sum_e pre-filled with 1.
             now.mulAsg(sum_e[idx]);
+        }
+    }
+}
+
+fn butterflyInv(comptime mod: u32, a: []Modint(mod)) void {
+    const Mint = Modint(mod);
+    const n = a.len;
+    const h = std.math.log2_int_ceil(usize, n);
+    const prep = prepareFFT(mod);
+    const sum_ie = prep.sum_ie;
+
+    var phi: isize = @intCast(h);
+    while (phi >= 1) : (phi -= 1) {
+        const ph: usize = @intCast(phi);
+        const w: usize = @as(usize, 1) << @truncate(ph - 1);
+        const p: usize = @as(usize, 1) << @truncate(h - ph);
+        var inow = Mint.raw(1);
+        for (0..w) |s| {
+            const offset = s << @truncate(h - ph + 1);
+            for (0..p) |i| {
+                const l = a[i + offset];
+                const r = a[i + offset + p];
+                a[i + offset] = l.add(r);
+                // M + l - r (to avoid negative)
+                const t = Mint.raw(mod + l.val - r.val).mul(inow);
+                a[i + offset + p] = t;
+            }
+            const idx = trailingZerosOfNot(s);
+            inow.mulAsg(sum_ie[idx]);
         }
     }
 }
@@ -161,6 +191,10 @@ fn convolutionNaiveModint(comptime mod: u32, allocator: Allocator, a: []const Mo
         }
     }
     return ans;
+}
+
+fn trailingZerosOfNot(s: usize) u32 {
+    return @ctz(~s);
 }
 
 const testing = std.testing;
