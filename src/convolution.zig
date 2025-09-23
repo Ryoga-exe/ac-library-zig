@@ -362,3 +362,65 @@ fn simpleTest(T: type) !void {
         }
     }
 }
+
+// https://github.com/atcoder/ac-library/blob/8250de484ae0ab597391db58040a602e0dc1a419/test/unittest/convolution_test.cpp#L315-L329
+test "convolution test: conv_ll" {}
+
+// https://github.com/atcoder/ac-library/blob/8250de484ae0ab597391db58040a602e0dc1a419/test/unittest/convolution_test.cpp#L331-L356
+test "convolution test: conv_ll_bound" {}
+
+// https://github.com/atcoder/ac-library/blob/8250de484ae0ab597391db58040a602e0dc1a419/test/unittest/convolution_test.cpp#L358-L371
+test "convolution test: conv_641" {
+    var arena = std.heap.ArenaAllocator.init(testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
+
+    // 641 = 128 * 5 + 1
+    const mod = 641;
+
+    const a = try allocator.alloc(i64, 64);
+    const b = try allocator.alloc(i64, 65);
+
+    const rand = std.crypto.random;
+
+    for (a) |*elem| {
+        elem.* = rand.intRangeAtMost(i64, 0, mod - 1);
+    }
+    for (b) |*elem| {
+        elem.* = rand.intRangeAtMost(i64, 0, mod - 1);
+    }
+
+    try expectEqualSlices(
+        i64,
+        try convolutionNaive(mod, i64, allocator, a, b),
+        try convolution(mod, i64, allocator, a, b),
+    );
+}
+
+// https://github.com/atcoder/ac-library/blob/8250de484ae0ab597391db58040a602e0dc1a419/test/unittest/convolution_test.cpp#L373-L386
+test "convolution test: 18433" {
+    var arena = std.heap.ArenaAllocator.init(testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
+
+    // 18433 = 2048 * 9 + 1
+    const mod = 18433;
+
+    const a = try allocator.alloc(i64, 1024);
+    const b = try allocator.alloc(i64, 1025);
+
+    const rand = std.crypto.random;
+
+    for (a) |*elem| {
+        elem.* = rand.intRangeAtMost(i64, 0, mod - 1);
+    }
+    for (b) |*elem| {
+        elem.* = rand.intRangeAtMost(i64, 0, mod - 1);
+    }
+
+    try expectEqualSlices(
+        i64,
+        try convolutionNaive(mod, i64, allocator, a, b),
+        try convolution(mod, i64, allocator, a, b),
+    );
+}
