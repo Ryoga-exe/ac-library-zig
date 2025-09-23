@@ -213,6 +213,19 @@ fn convolutionNaive(comptime mod: u32, comptime T: type, allocator: Allocator, a
     return ans;
 }
 
+fn convolutionNaiveI64(allocator: Allocator, a: []const i64, b: []const i64) ![]i64 {
+    const n = a.len;
+    const m = b.len;
+    var ans = try allocator.alloc(i64, n + m - 1);
+    @memset(ans, 0);
+    for (0..m) |j| {
+        for (0..n) |i| {
+            ans[i + j] +%= a[i] *% b[j];
+        }
+    }
+    return ans;
+}
+
 fn trailingZerosOfNot(s: usize) u32 {
     return @ctz(~s);
 }
@@ -364,10 +377,70 @@ fn simpleTest(T: type) !void {
 }
 
 // https://github.com/atcoder/ac-library/blob/8250de484ae0ab597391db58040a602e0dc1a419/test/unittest/convolution_test.cpp#L315-L329
-test "convolution test: conv_ll" {}
+test "convolution test: conv_ll" {
+    var arena = std.heap.ArenaAllocator.init(testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
+
+    for (1..20) |n| {
+        for (1..20) |m| {
+            const a = try allocator.alloc(i64, n);
+            const b = try allocator.alloc(i64, m);
+
+            const rand = std.crypto.random;
+
+            for (a) |*elem| {
+                elem.* = rand.intRangeAtMost(i64, -500_000, 1_000_000 - 1);
+            }
+            for (b) |*elem| {
+                elem.* = rand.intRangeAtMost(i64, -500_000, 1_000_000 - 1);
+            }
+
+            try expectEqualSlices(
+                i64,
+                try convolutionNaiveI64(allocator, a, b),
+                try convolutionI64(allocator, a, b),
+            );
+        }
+    }
+}
 
 // https://github.com/atcoder/ac-library/blob/8250de484ae0ab597391db58040a602e0dc1a419/test/unittest/convolution_test.cpp#L331-L356
-test "convolution test: conv_ll_bound" {}
+test "convolution test: conv_ll_bound" {
+    var arena = std.heap.ArenaAllocator.init(testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
+
+    const mod1 = 469762049; // 2^26
+    const mod2 = 167772161; // 2^25
+    const mod3 = 754974721; // 2^24
+    const m2m3: u64 = mod2 * mod3;
+    const m1m3: u64 = mod1 * mod3;
+    const m1m2: u64 = mod1 * mod2;
+
+    for (0..2000 + 1) |raw_i| {
+        const i = @as(i64, @intCast(raw_i)) - 1000;
+        const base = @as(u64, 0) -% (m1m2 + m1m3 + m2m3);
+        const a = [1]i64{@as(i64, @bitCast(base)) + i};
+        const b = [1]i64{1};
+
+        try expectEqualSlices(i64, &a, try convolutionI64(allocator, &a, &b));
+    }
+
+    for (0..1000) |i| {
+        const a = [1]i64{std.math.minInt(i64) + @as(i64, @intCast(i))};
+        const b = [1]i64{1};
+
+        try expectEqualSlices(i64, &a, try convolutionI64(allocator, &a, &b));
+    }
+
+    for (0..1000) |i| {
+        const a = [1]i64{std.math.maxInt(i64) - @as(i64, @intCast(i))};
+        const b = [1]i64{1};
+
+        try expectEqualSlices(i64, &a, try convolutionI64(allocator, &a, &b));
+    }
+}
 
 // https://github.com/atcoder/ac-library/blob/8250de484ae0ab597391db58040a602e0dc1a419/test/unittest/convolution_test.cpp#L358-L371
 test "convolution test: conv_641" {
@@ -398,7 +471,7 @@ test "convolution test: conv_641" {
 }
 
 // https://github.com/atcoder/ac-library/blob/8250de484ae0ab597391db58040a602e0dc1a419/test/unittest/convolution_test.cpp#L373-L386
-test "convolution test: 18433" {
+test "convolution test: conv_18433" {
     var arena = std.heap.ArenaAllocator.init(testing.allocator);
     defer arena.deinit();
     const allocator = arena.allocator();
