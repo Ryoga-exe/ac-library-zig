@@ -5,6 +5,7 @@ const assert = std.debug.assert;
 
 const internal = @import("internal_math.zig");
 
+// TODO: add doc comment
 pub fn convolution(comptime mod: u32, comptime T: type, allocator: Allocator, a: []const T, b: []const T) ![]T {
     const Mint = Modint(mod);
     const n = a.len;
@@ -35,6 +36,7 @@ pub fn convolution(comptime mod: u32, comptime T: type, allocator: Allocator, a:
     return out;
 }
 
+// TODO: add doc comment
 pub fn convolutionModint(comptime mod: u32, allocator: Allocator, a: []const Modint(mod), b: []const Modint(mod)) ![]Modint(mod) {
     const Mint = Modint(mod);
     const n = a.len;
@@ -76,6 +78,7 @@ pub fn convolutionModint(comptime mod: u32, allocator: Allocator, a: []const Mod
     return a_tmp;
 }
 
+// TODO: add doc comment
 pub fn convolutionI64(allocator: Allocator, a: []const i64, b: []const i64) ![]i64 {
     _ = allocator; // autofix
     _ = a; // autofix
