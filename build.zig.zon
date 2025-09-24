@@ -1,8 +1,15 @@
 .{
     .name = .ac_library,
     .version = "0.4.0",
-    .minimum_zig_version = "0.15.1",
     .fingerprint = 0x8ab1cf135fb49dc,
+    .minimum_zig_version = "0.15.1",
+    .dependencies = .{
+        .proconio = .{
+            .url = "git+https://github.com/Ryoga-exe/proconio-zig?ref=v0.3.0#3d540a05fad56f6f6dbdebcb4ba92dbfe0015b31",
+            .hash = "proconio-0.3.0--aR2q9Q7AAC58f_XY7oSS0LHKxAAnhOGrcS-iv5jaXXq",
+            .lazy = true,
+        },
+    },
     .paths = .{
         "src",
         "LICENSE",
