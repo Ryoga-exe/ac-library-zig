@@ -13,7 +13,7 @@ pub fn StaticModint(comptime m: comptime_int) type {
     }
 
     // The smallest unsigned integer type that fits `[0, m-1]`.
-    const T = comptime std.math.IntFittingRange(0, m - 1);
+    const T = comptime std.math.IntFittingRange(0, 2 * (m - 1));
 
     return struct {
         const Self = @This();

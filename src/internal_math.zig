@@ -289,3 +289,96 @@ test invGcd {
         try std.testing.expectEqual(@mod(@as(i128, t.g), b), @mod(@mod((@as(i128, x) * @as(i128, t.a)), b) + b, b));
     }
 }
+
+/// Comptime primitive root
+/// param `m` must be prime
+/// returns primitive root (and minimum in now)
+pub fn comptimePrimitiveRoot(m: comptime_int) comptime_int {
+    switch (m) {
+        2 => return 1,
+        167_772_161 => return 3,
+        469_762_049 => return 3,
+        754_974_721 => return 11,
+        998_244_353 => return 3,
+        else => {},
+    }
+
+    comptime var divs = [_]comptime_int{0} ** 20;
+    divs[0] = 2;
+    comptime var cnt = 1;
+    comptime var x = (m - 1) / 2;
+    inline while (x % 2 == 0) {
+        x /= 2;
+    }
+    comptime var i = 3;
+
+    inline while (i * i <= x) : (i += 2) {
+        if (x % i == 0) {
+            divs[cnt] = i;
+            cnt += 1;
+            inline while (x % i == 0) {
+                x /= i;
+            }
+        }
+    }
+    if (x > 1) {
+        divs[cnt] = x;
+        cnt += 1;
+    }
+    comptime var g = 2;
+    inline while (true) : (g += 1) {
+        var ok = true;
+        for (divs[0..cnt]) |div| {
+            if (comptimePowMod(g, (m - 1) / div, m) == 1) {
+                ok = false;
+                break;
+            }
+        }
+        if (ok) {
+            return g;
+        }
+    }
+}
+
+test comptimePrimitiveRoot {
+    inline for (.{
+        2,
+        3,
+        5,
+        7,
+        233,
+        200003,
+        998244353,
+        1_000_000_007,
+        std.math.maxInt(i32),
+    }) |p| {
+        try std.testing.expect(comptimeIsPrime(p));
+        const g = comptimePrimitiveRoot(p);
+        if (p != 2) {
+            try std.testing.expect(g != 1);
+        }
+
+        const q = p - 1;
+        comptime var i: comptime_int = 2;
+        @setEvalBranchQuota(500000);
+        inline while (i * i <= q) : (i += 1) {
+            if (q % i != 0) {
+                break;
+            }
+            try std.testing.expect(comptimePowMod(g, i, p) != 1);
+            try std.testing.expect(comptimePowMod(g, q / i, p) != 1);
+        }
+        try std.testing.expectEqual(1, comptimePowMod(g, q, p));
+
+        if (p < 1_000_000) {
+            const allocator = std.testing.allocator;
+            var hashmap = std.AutoHashMap(usize, void).init(allocator);
+            defer hashmap.deinit();
+
+            for (0..p - 1) |v| {
+                try hashmap.put(v * g % p, {});
+            }
+            try std.testing.expectEqual(p - 1, hashmap.count());
+        }
+    }
+}
