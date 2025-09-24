@@ -5,7 +5,22 @@ const assert = std.debug.assert;
 
 const internal = @import("internal_math.zig");
 
-// TODO: add doc comment
+/// Calculates the $(+, \times)$ convolution in $\mathbb{Z}/p\mathbb{Z}$.
+/// Caller must free returned memory.
+///
+/// Returns a empty `T[]` if `a` or `b` is empty.
+///
+/// # Constraints
+///
+/// - $2 \leq m \leq 2 \times 10^9$
+/// - `mod` is a prime number.
+/// - $\exists c \text{ s.t. } 2^c \mid (m - 1), |a| + |b| - 1 \leq 2^c$
+/// - $(0, m] \subseteq$ `T`
+///
+/// # Complexity
+///
+/// - $O(n \log n + \log m)$ where $n = |a| + |b|$.
+///
 pub fn convolution(comptime mod: u32, comptime T: type, allocator: Allocator, a: []const T, b: []const T) ![]T {
     const Mint = Modint(mod);
     const n = a.len;
@@ -36,7 +51,22 @@ pub fn convolution(comptime mod: u32, comptime T: type, allocator: Allocator, a:
     return out;
 }
 
-// TODO: add doc comment
+/// Calculates the $(+, \times)$ convolution in $\mathbb{Z}/p\mathbb{Z}$.
+/// Caller must free returned memory.
+///
+/// Returns a empty `T[]` if `a` or `b` is empty.
+///
+/// # Constraints
+///
+/// - $2 \leq m \leq 2 \times 10^9$
+/// - `mod` is a prime number.
+/// - $\exists c \text{ s.t. } 2^c \mid (m - 1), |a| + |b| - 1 \leq 2^c$
+/// - $(0, m] \subseteq$ `T`
+///
+/// # Complexity
+///
+/// - $O(n \log n + \log m)$ where $n = |a| + |b|$.
+///
 pub fn convolutionModint(comptime mod: u32, allocator: Allocator, a: []const Modint(mod), b: []const Modint(mod)) ![]Modint(mod) {
     const Mint = Modint(mod);
     const n = a.len;
@@ -78,7 +108,20 @@ pub fn convolutionModint(comptime mod: u32, allocator: Allocator, a: []const Mod
     return a_tmp;
 }
 
-// TODO: add doc comment
+/// Calculates the $(+, \times)$ convolution in `i64`.
+/// Caller must free returned memory.
+///
+/// Returns a empty `Vec` if `a` or `b` is empty.
+///
+/// # Constraints
+///
+/// - $|a| + |b| - 1 \leq 2^{24}$
+/// - All elements of the result are inside of the range of `i64`
+///
+/// # Complexity
+///
+/// - $O(n \log n)$ where $n = |a| + |b|$.
+///
 pub fn convolutionI64(allocator: Allocator, a: []const i64, b: []const i64) ![]i64 {
     const n = a.len;
     const m = b.len;
