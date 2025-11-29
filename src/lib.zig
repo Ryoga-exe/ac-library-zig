@@ -32,6 +32,10 @@ pub const lcpArray = string.lcpArray;
 pub const zAlgorithmArbitrary = string.zAlgorithmArbitrary;
 pub const zAlgorithm = string.zAlgorithm;
 
+pub const convolution = @import("convolution.zig").convolution;
+pub const convolutionI64 = @import("convolution.zig").convolutionI64;
+pub const convolutionModint = @import("convolution.zig").convolutionModint;
+
 test {
     std.testing.refAllDecls(@This());
 }
