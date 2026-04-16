@@ -359,16 +359,19 @@ test "convolution test: mid" {
     const mod = 998244353;
     const Mint = Modint(mod);
 
-    const rand = std.crypto.random;
+    const io = testing.io;
+    const rng_impl: std.Random.IoSource = .{ .io = io };
+    const rng = rng_impl.interface();
+
     const a = try allocator.alloc(Mint, n);
     const b = try allocator.alloc(Mint, m);
     defer allocator.free(b);
 
     for (a) |*elem| {
-        elem.* = Mint.init(rand.intRangeAtMost(u32, 0, mod - 1));
+        elem.* = Mint.init(rng.intRangeAtMost(u32, 0, mod - 1));
     }
     for (b) |*elem| {
-        elem.* = Mint.init(rand.intRangeAtMost(u32, 0, mod - 1));
+        elem.* = Mint.init(rng.intRangeAtMost(u32, 0, mod - 1));
     }
 
     try expectEqualSlices(
@@ -384,7 +387,9 @@ test "convolution test: simple s mod" {
     defer arena.deinit();
     const allocator = arena.allocator();
 
-    const rand = std.crypto.random;
+    const io = testing.io;
+    const rng_impl: std.Random.IoSource = .{ .io = io };
+    const rng = rng_impl.interface();
 
     inline for (.{ 998_244_353, 924_844_033 }) |mod| {
         const Mint = Modint(mod);
@@ -394,10 +399,10 @@ test "convolution test: simple s mod" {
                 const b = try allocator.alloc(Mint, m);
 
                 for (a) |*elem| {
-                    elem.* = Mint.init(rand.intRangeAtMost(u32, 0, mod - 1));
+                    elem.* = Mint.init(rng.intRangeAtMost(u32, 0, mod - 1));
                 }
                 for (b) |*elem| {
-                    elem.* = Mint.init(rand.intRangeAtMost(u32, 0, mod - 1));
+                    elem.* = Mint.init(rng.intRangeAtMost(u32, 0, mod - 1));
                 }
 
                 try expectEqualSlices(
@@ -445,7 +450,9 @@ fn simpleTest(T: type) !void {
     defer arena.deinit();
     const allocator = arena.allocator();
 
-    const rand = std.crypto.random;
+    const io = testing.io;
+    const rng_impl: std.Random.IoSource = .{ .io = io };
+    const rng = rng_impl.interface();
 
     inline for (.{ 998_244_353, 924_844_033 }) |mod| {
         for (1..20) |n| {
@@ -454,10 +461,10 @@ fn simpleTest(T: type) !void {
                 const b = try allocator.alloc(T, m);
 
                 for (a) |*elem| {
-                    elem.* = rand.intRangeAtMost(T, 0, mod - 1);
+                    elem.* = rng.intRangeAtMost(T, 0, mod - 1);
                 }
                 for (b) |*elem| {
-                    elem.* = rand.intRangeAtMost(T, 0, mod - 1);
+                    elem.* = rng.intRangeAtMost(T, 0, mod - 1);
                 }
 
                 try expectEqualSlices(
@@ -481,13 +488,15 @@ test "convolution test: conv_ll" {
             const a = try allocator.alloc(i64, n);
             const b = try allocator.alloc(i64, m);
 
-            const rand = std.crypto.random;
+            const io = testing.io;
+            const rng_impl: std.Random.IoSource = .{ .io = io };
+            const rng = rng_impl.interface();
 
             for (a) |*elem| {
-                elem.* = rand.intRangeAtMost(i64, -500_000, 1_000_000 - 1);
+                elem.* = rng.intRangeAtMost(i64, -500_000, 1_000_000 - 1);
             }
             for (b) |*elem| {
-                elem.* = rand.intRangeAtMost(i64, -500_000, 1_000_000 - 1);
+                elem.* = rng.intRangeAtMost(i64, -500_000, 1_000_000 - 1);
             }
 
             try expectEqualSlices(
@@ -548,13 +557,15 @@ test "convolution test: conv_641" {
     const a = try allocator.alloc(i64, 64);
     const b = try allocator.alloc(i64, 65);
 
-    const rand = std.crypto.random;
+    const io = testing.io;
+    const rng_impl: std.Random.IoSource = .{ .io = io };
+    const rng = rng_impl.interface();
 
     for (a) |*elem| {
-        elem.* = rand.intRangeAtMost(i64, 0, mod - 1);
+        elem.* = rng.intRangeAtMost(i64, 0, mod - 1);
     }
     for (b) |*elem| {
-        elem.* = rand.intRangeAtMost(i64, 0, mod - 1);
+        elem.* = rng.intRangeAtMost(i64, 0, mod - 1);
     }
 
     try expectEqualSlices(
@@ -576,13 +587,15 @@ test "convolution test: conv_18433" {
     const a = try allocator.alloc(i64, 1024);
     const b = try allocator.alloc(i64, 1025);
 
-    const rand = std.crypto.random;
+    const io = testing.io;
+    const rng_impl: std.Random.IoSource = .{ .io = io };
+    const rng = rng_impl.interface();
 
     for (a) |*elem| {
-        elem.* = rand.intRangeAtMost(i64, 0, mod - 1);
+        elem.* = rng.intRangeAtMost(i64, 0, mod - 1);
     }
     for (b) |*elem| {
-        elem.* = rand.intRangeAtMost(i64, 0, mod - 1);
+        elem.* = rng.intRangeAtMost(i64, 0, mod - 1);
     }
 
     try expectEqualSlices(
