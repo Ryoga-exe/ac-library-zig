@@ -392,13 +392,13 @@ pub fn McfGraph(comptime Cap: type, comptime Cost: type) type {
             };
             var que_min: ArrayList(usize) = .empty;
             defer que_min.deinit(self.allocator);
-            var que = std.PriorityQueue(Q, void, Q.lessThan).init(allocator, {});
-            defer que.deinit();
+            var que: std.PriorityQueue(Q, void, Q.lessThan) = .empty;
+            defer que.deinit(allocator);
 
             dual[s].@"1" = 0;
             try que_min.append(self.allocator, s);
             while (que.count() > 0 or que_min.items.len > 0) {
-                const v = que_min.pop() orelse que.remove().to;
+                const v = que_min.pop() orelse que.pop().?.to;
                 if (vis[v]) {
                     continue;
                 }
@@ -420,7 +420,7 @@ pub fn McfGraph(comptime Cap: type, comptime Cost: type) type {
                         if (dist_to == dist_v) {
                             try que_min.append(self.allocator, e.to);
                         } else {
-                            try que.add(Q{ .key = dist_to, .to = e.to });
+                            try que.push(allocator, .{ .key = dist_to, .to = e.to });
                         }
                     }
                 }
