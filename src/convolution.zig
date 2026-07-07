@@ -8,7 +8,7 @@ const internal = @import("internal_math.zig");
 /// Calculates the $(+, \times)$ convolution in $\mathbb{Z}/p\mathbb{Z}$.
 /// Caller must free returned memory.
 ///
-/// Returns a empty `T[]` if `a` or `b` is empty.
+/// Returns an empty `T[]` if `a` or `b` is empty.
 ///
 /// # Constraints
 ///
@@ -54,7 +54,7 @@ pub fn convolution(comptime mod: u32, comptime T: type, allocator: Allocator, a:
 /// Calculates the $(+, \times)$ convolution in $\mathbb{Z}/p\mathbb{Z}$.
 /// Caller must free returned memory.
 ///
-/// Returns a empty `T[]` if `a` or `b` is empty.
+/// Returns an empty `T[]` if `a` or `b` is empty.
 ///
 /// # Constraints
 ///
@@ -111,7 +111,7 @@ pub fn convolutionModint(comptime mod: u32, allocator: Allocator, a: []const Mod
 /// Calculates the $(+, \times)$ convolution in `i64`.
 /// Caller must free returned memory.
 ///
-/// Returns a empty `Vec` if `a` or `b` is empty.
+/// Returns an empty `Vec` if `a` or `b` is empty.
 ///
 /// # Constraints
 ///
