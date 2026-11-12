@@ -133,8 +133,8 @@ pub fn McfGraph(comptime Cap: type, comptime Cost: type) type {
 
         /// Returns cloned of the current internal state of the edges.
         /// The edges are ordered in the same order as added by `addEdge`.
-        pub fn cloneEdges(self: Self) Allocator.Error![]Edges {
-            return self.g.clone();
+        pub fn cloneEdges(self: Self, allocator: Allocator) Allocator.Error![]Edge {
+            return allocator.dupe(Edge, self.edges.items);
         }
 
         /// Computes the minimum-cost flow from `s` to `t`.
@@ -474,7 +474,7 @@ test McfGraph {
 
     _ = try graph2.addEdge(0, 1, 3, 2);
     _ = try graph2.flowWithCapacity(0, 1, 1);
-    const edges = try graph2.cloneEdges();
+    const edges = try graph2.cloneEdges(allocator);
     defer allocator.free(edges);
     try expectEqualSlices(McfGraphI32.Edge, &.{
         .{ .from = 0, .to = 1, .cap = 3, .flow = 1, .cost = 2 },
