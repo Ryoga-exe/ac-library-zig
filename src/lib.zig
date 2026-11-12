@@ -38,4 +38,7 @@ pub const convolutionModint = @import("convolution.zig").convolutionModint;
 
 test {
     std.testing.refAllDecls(@This());
+    _ = @import("internal_csr.zig");
+    _ = @import("internal_groups.zig");
+    _ = @import("internal_scc.zig");
 }
