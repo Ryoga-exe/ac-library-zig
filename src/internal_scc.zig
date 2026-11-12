@@ -41,37 +41,35 @@ pub fn addEdge(self: *SccGraph, from: usize, to: usize) !void {
     try self.edges.append(self.allocator, .{ from, Edge{ .to = to } });
 }
 pub fn sccIds(self: SccGraph) !struct { usize, []usize } {
-    var env = Env{
-        .g = try .init(self.allocator, self.n, self.edges.items, Edge{ .to = 0 }),
-        .now_ord = 0,
-        .group_num = 0,
-        .visited = try .initCapacity(self.allocator, self.n),
-        .low = try self.allocator.alloc(usize, self.n),
-        .ord = try self.allocator.alloc(?usize, self.n),
-        .ids = try self.allocator.alloc(usize, self.n),
-    };
+    const allocator = self.allocator;
+
+    var env: Env = undefined;
+    env.now_ord = 0;
+    env.group_num = 0;
+    env.g = try .init(allocator, self.n, self.edges.items, .{ .to = 0 });
+    defer env.g.deinit();
+    env.visited = try .initCapacity(allocator, self.n);
+    defer env.visited.deinit(allocator);
+    env.low = try allocator.alloc(usize, self.n);
+    defer allocator.free(env.low);
+    env.ord = try allocator.alloc(?usize, self.n);
+    defer allocator.free(env.ord);
+    env.ids = try allocator.alloc(usize, self.n);
+    errdefer allocator.free(env.ids);
 
     @memset(env.low, 0);
     @memset(env.ord, null);
     @memset(env.ids, 0);
 
-    defer {
-        env.g.deinit();
-        env.visited.deinit(self.allocator);
-        self.allocator.free(env.low);
-        self.allocator.free(env.ord);
-        self.allocator.free(env.ids);
-    }
-
     for (0..self.n) |i| {
         if (env.ord[i] == null) {
-            try dfs(self.allocator, i, self.n, &env);
+            try dfs(allocator, i, self.n, &env);
         }
     }
     for (0..self.n) |i| {
         env.ids[i] = env.group_num - 1 - env.ids[i];
     }
-    return .{ env.group_num, try self.allocator.dupe(usize, env.ids) };
+    return .{ env.group_num, env.ids };
 }
 pub fn scc(self: SccGraph) !Groups {
     const group_num, const ids = try self.sccIds();
