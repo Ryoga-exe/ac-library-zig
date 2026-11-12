@@ -147,18 +147,31 @@ pub fn StaticModint(comptime m: comptime_int) type {
 
         /// Returns `self` to the power of `n`.
         pub inline fn pow(self: Self, n: anytype) Self {
-            @setEvalBranchQuota(100000);
             assert(0 <= n);
             var x = self;
             var r = Self.init(1);
-            var _n: std.math.IntFittingRange(0, n) = n;
-            while (_n > 0) : (_n >>= 1) {
-                if (_n & 1 == 1) {
-                    r = r.mul(x);
+
+            if (@typeInfo(@TypeOf(.{n})).@"struct".field_attrs[0].@"comptime") {
+                @setEvalBranchQuota(100000);
+                comptime var n_tmp: comptime_int = n;
+
+                inline while (n_tmp > 0) : (n_tmp >>= 1) {
+                    if (n_tmp & 1 == 1) {
+                        r = r.mul(x);
+                    }
+                    x = x.mul(x);
                 }
-                x = x.mul(x);
+                return r;
+            } else {
+                var n_tmp: @Int(.unsigned, @max(2, @typeInfo(@TypeOf(n)).int.bits)) = @intCast(n);
+                while (n_tmp > 0) : (n_tmp >>= 1) {
+                    if (n_tmp & 1 == 1) {
+                        r = r.mul(x);
+                    }
+                    x = x.mul(x);
+                }
+                return r;
             }
-            return r;
         }
 
         /// Retruns the multiplicative inverse of `self`.
@@ -340,14 +353,28 @@ pub fn DynamicModint(id: comptime_int) type {
             assert(0 <= n);
             var x = self;
             var r = Self.init(1);
-            var _n: std.math.IntFittingRange(0, n) = n;
-            while (_n > 0) : (_n >>= 1) {
-                if (_n & 1 == 1) {
-                    r = r.mul(x);
+
+            if (@typeInfo(@TypeOf(.{n})).@"struct".field_attrs[0].@"comptime") {
+                @setEvalBranchQuota(100000);
+                comptime var n_tmp: comptime_int = n;
+
+                inline while (n_tmp > 0) : (n_tmp >>= 1) {
+                    if (n_tmp & 1 == 1) {
+                        r = r.mul(x);
+                    }
+                    x = x.mul(x);
                 }
-                x = x.mul(x);
+                return r;
+            } else {
+                var n_tmp: @Int(.unsigned, @max(2, @typeInfo(@TypeOf(n)).int.bits)) = @intCast(n);
+                while (n_tmp > 0) : (n_tmp >>= 1) {
+                    if (n_tmp & 1 == 1) {
+                        r = r.mul(x);
+                    }
+                    x = x.mul(x);
+                }
+                return r;
             }
-            return r;
         }
 
         /// Retruns the multiplicative inverse of `self`.
@@ -440,6 +467,9 @@ test StaticModint {
     for ([_]u32{ 0, 1, 3 }, [_]u32{ 1, 2, 8 }) |n, expected_pow| {
         try expectEqual(expected_pow, init(2).pow(n).as(u32));
     }
+    for ([_]u1{ 0, 1 }, [_]u32{ 1, 2 }) |n, expected_pow| {
+        try expectEqual(expected_pow, init(2).pow(n).as(u32));
+    }
 }
 
 test DynamicModint {
@@ -495,6 +525,9 @@ test DynamicModint {
 
     // pow
     for ([_]u32{ 0, 1, 3 }, [_]u32{ 1, 2, 8 }) |n, expected_pow| {
+        try expectEqual(expected_pow, init(2).pow(n).as(u32));
+    }
+    for ([_]u1{ 0, 1 }, [_]u32{ 1, 2 }) |n, expected_pow| {
         try expectEqual(expected_pow, init(2).pow(n).as(u32));
     }
 }
