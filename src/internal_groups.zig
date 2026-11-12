@@ -88,3 +88,12 @@ pub fn get(self: *Groups, a: usize) []usize {
     const offset = self.offset[a];
     return self.data[offset .. offset + self.group_size[a]];
 }
+
+test Groups {
+    try std.testing.checkAllAllocationFailures(std.testing.allocator, struct {
+        fn check(allocator: Allocator) !void {
+            var groups = try Groups.init(allocator, 2, &.{ 0, 1, 0 });
+            defer groups.deinit();
+        }
+    }.check, .{});
+}
