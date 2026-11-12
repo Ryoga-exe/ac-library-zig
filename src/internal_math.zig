@@ -303,7 +303,7 @@ pub fn comptimePrimitiveRoot(m: comptime_int) comptime_int {
         else => {},
     }
 
-    comptime var divs = [_]comptime_int{0} ** 20;
+    comptime var divs: [20]comptime_int = @splat(0);
     divs[0] = 2;
     comptime var cnt = 1;
     comptime var x = (m - 1) / 2;
