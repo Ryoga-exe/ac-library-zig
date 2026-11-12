@@ -381,21 +381,21 @@ pub fn suffixArrayArbitrary(comptime T: type, allocator: Allocator, s: []const T
     for (0..n) |i| {
         idx[i] = i;
     }
-    std.mem.sort(usize, &idx, {}, struct {
-        fn cmp(l: usize, r: usize) bool {
-            s[l] < s[r];
+    std.mem.sort(usize, idx, s, struct {
+        fn cmp(context: []const T, l: usize, r: usize) bool {
+            return context[l] < context[r];
         }
     }.cmp);
     var s2 = try allocator.alloc(usize, n);
     defer allocator.free(s2);
-    var now = 0;
+    var now: usize = 0;
     for (0..n) |i| {
         if (i > 0 and s[idx[i - 1]] != s[idx[i]]) {
             now += 1;
         }
         s2[idx[i]] = now;
     }
-    return saIsI32(.default, allocator, s2, now);
+    return saIs(.default, allocator, s2, now);
 }
 
 test suffixArrayArbitrary {
