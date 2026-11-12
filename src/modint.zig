@@ -147,31 +147,25 @@ pub fn StaticModint(comptime m: comptime_int) type {
 
         /// Returns `self` to the power of `n`.
         pub inline fn pow(self: Self, n: anytype) Self {
+            @setEvalBranchQuota(100000);
             assert(0 <= n);
-            var x = self;
-            var r = Self.init(1);
 
-            if (@typeInfo(@TypeOf(.{n})).@"struct".field_attrs[0].@"comptime") {
-                @setEvalBranchQuota(100000);
-                comptime var n_tmp: comptime_int = n;
+            const Exponent = if (@TypeOf(n) == comptime_int)
+                std.math.IntFittingRange(0, @max(2, n))
+            else
+                @Int(.unsigned, @max(2, @typeInfo(@TypeOf(n)).int.bits));
 
-                inline while (n_tmp > 0) : (n_tmp >>= 1) {
-                    if (n_tmp & 1 == 1) {
-                        r = r.mul(x);
-                    }
-                    x = x.mul(x);
+            var exponent: Exponent = @intCast(n);
+            var base = self;
+            var result = Self.init(1);
+
+            while (exponent > 0) : (exponent >>= 1) {
+                if (exponent & 1 == 1) {
+                    result = result.mul(base);
                 }
-                return r;
-            } else {
-                var n_tmp: @Int(.unsigned, @max(2, @typeInfo(@TypeOf(n)).int.bits)) = @intCast(n);
-                while (n_tmp > 0) : (n_tmp >>= 1) {
-                    if (n_tmp & 1 == 1) {
-                        r = r.mul(x);
-                    }
-                    x = x.mul(x);
-                }
-                return r;
+                base = base.mul(base);
             }
+            return result;
         }
 
         /// Retruns the multiplicative inverse of `self`.
@@ -350,31 +344,25 @@ pub fn DynamicModint(id: comptime_int) type {
 
         /// Returns `self` to the power of `n`.
         pub inline fn pow(self: Self, n: anytype) Self {
+            @setEvalBranchQuota(100000);
             assert(0 <= n);
-            var x = self;
-            var r = Self.init(1);
 
-            if (@typeInfo(@TypeOf(.{n})).@"struct".field_attrs[0].@"comptime") {
-                @setEvalBranchQuota(100000);
-                comptime var n_tmp: comptime_int = n;
+            const Exponent = if (@TypeOf(n) == comptime_int)
+                std.math.IntFittingRange(0, @max(2, n))
+            else
+                @Int(.unsigned, @max(2, @typeInfo(@TypeOf(n)).int.bits));
 
-                inline while (n_tmp > 0) : (n_tmp >>= 1) {
-                    if (n_tmp & 1 == 1) {
-                        r = r.mul(x);
-                    }
-                    x = x.mul(x);
+            var exponent: Exponent = @intCast(n);
+            var base = self;
+            var result = Self.init(1);
+
+            while (exponent > 0) : (exponent >>= 1) {
+                if (exponent & 1 == 1) {
+                    result = result.mul(base);
                 }
-                return r;
-            } else {
-                var n_tmp: @Int(.unsigned, @max(2, @typeInfo(@TypeOf(n)).int.bits)) = @intCast(n);
-                while (n_tmp > 0) : (n_tmp >>= 1) {
-                    if (n_tmp & 1 == 1) {
-                        r = r.mul(x);
-                    }
-                    x = x.mul(x);
-                }
-                return r;
+                base = base.mul(base);
             }
+            return result;
         }
 
         /// Retruns the multiplicative inverse of `self`.
