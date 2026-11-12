@@ -398,6 +398,21 @@ pub fn suffixArrayArbitrary(comptime T: type, allocator: Allocator, s: []const T
     return saIsI32(.default, allocator, s2, now);
 }
 
+test suffixArrayArbitrary {
+    const allocator = std.testing.allocator;
+    const cases = [_]struct { s: []const i64, expected: []const usize }{
+        .{ .s = &.{}, .expected = &.{} },
+        .{ .s = &.{ 3, 1, 2 }, .expected = &.{ 1, 2, 0 } },
+        .{ .s = &.{ 9_000_000_000, -9_000_000_000, 9_000_000_000 }, .expected = &.{ 1, 2, 0 } },
+        .{ .s = &.{ 7, 7, 7 }, .expected = &.{ 2, 1, 0 } },
+    };
+    for (cases) |case| {
+        const sa = try suffixArrayArbitrary(i64, allocator, case.s);
+        defer allocator.free(sa);
+        try std.testing.expectEqualSlices(usize, case.expected, sa);
+    }
+}
+
 /// Given a string `s` of length `n`, it returns the suffix array of `s`.
 /// Here, the suffix array `sa` of `s` is a permutation of $0, \cdots, n-1$ such that `s[sa[i]..n) < s[sa[i+1]..n)` holds for all $i = 0,1, \cdots ,n-2$.
 ///
