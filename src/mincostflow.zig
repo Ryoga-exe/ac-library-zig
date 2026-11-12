@@ -316,6 +316,7 @@ pub fn McfGraph(comptime Cap: type, comptime Cost: type) type {
                 var cost_current: Cost = 0;
                 var prev_cost_per_flow: Cost = -1;
                 var result: ArrayList(CapCostPair) = .empty;
+                errdefer result.deinit(self.allocator);
                 try result.append(self.allocator, CapCostPair{ 0, 0 });
                 while (flow_current < flow_limit) {
                     if (!try self.refineDual(s, t, g, dual_dist, vis, prev_e)) {
