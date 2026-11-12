@@ -515,3 +515,16 @@ test "only_one_nonzero_cost_edge" {
     defer allocator.free(slope);
     try expectEqualSlices(struct { i32, i32 }, &.{ .{ 0, 0 }, .{ 1, 1 } }, slope);
 }
+
+test "McfGraph: memory tests" {
+    try testing.checkAllAllocationFailures(testing.allocator, struct {
+        fn check(allocator: Allocator) !void {
+            var graph = McfGraph(i32, i32).init(allocator, 2);
+            defer graph.deinit();
+            _ = try graph.addEdge(0, 1, 1, 1);
+            const slope = try graph.slope(0, 1);
+            defer allocator.free(slope);
+            try expectEqualSlices(struct { i32, i32 }, &.{ .{ 0, 0 }, .{ 1, 1 } }, slope);
+        }
+    }.check, .{});
+}
