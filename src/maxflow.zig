@@ -496,3 +496,16 @@ test "test_dont_repeat_same_phase" {
     }
     try expectEqual(n, try graph.flow(0, 2));
 }
+
+test "MfGraph.changeEdge updates capacity and flow" {
+    const allocator = testing.allocator;
+    var graph = try MfGraph(i32).init(allocator, 2);
+    defer graph.deinit();
+
+    const edge = try graph.addEdge(0, 1, 3);
+    graph.changeEdge(edge, 5, 1);
+    try expectEqual(5, graph.getEdge(edge).cap);
+    try expectEqual(1, graph.getEdge(edge).flow);
+    try expectEqual(4, try graph.flow(0, 1));
+    try expectEqual(5, graph.getEdge(edge).flow);
+}
