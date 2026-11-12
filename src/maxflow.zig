@@ -186,7 +186,7 @@ pub fn MfGraph(comptime Cap: type) type {
             const m = pos.len;
             assert(i < m);
             assert(0 <= new_flow and new_flow <= new_cap);
-            var e = self.g[pos[i].@"0"].items[self.pos[i].@"1"].*;
+            var e = &self.g[pos[i].@"0"].items[self.pos.items[i].@"1"];
             e.cap = new_cap - new_flow;
             self.g[e.to].items[e.rev].cap = new_flow;
         }
