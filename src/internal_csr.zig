@@ -11,11 +11,16 @@ pub fn Csr(comptime E: type) type {
         allocator: Allocator,
 
         pub fn init(allocator: Allocator, n: usize, edges: []struct { usize, E }, initialValue: E) !Self {
+            const start = try allocator.alloc(usize, n + 1);
+            errdefer allocator.free(start);
+            const elist = try allocator.alloc(E, edges.len);
+            errdefer allocator.free(elist);
             const self = Self{
-                .start = try allocator.alloc(usize, n + 1),
-                .elist = try allocator.alloc(E, edges.len),
+                .start = start,
+                .elist = elist,
                 .allocator = allocator,
             };
+
             @memset(self.start, 0);
             @memset(self.elist, initialValue);
             for (edges) |e| {
