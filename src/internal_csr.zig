@@ -39,3 +39,13 @@ pub fn Csr(comptime E: type) type {
         }
     };
 }
+
+test Csr {
+    try std.testing.checkAllAllocationFailures(std.testing.allocator, struct {
+        fn check(allocator: Allocator) !void {
+            var edges = [_]struct { usize, usize }{ .{ 0, 1 }, .{ 1, 0 } };
+            var graph = try Csr(usize).init(allocator, 2, &edges, 0);
+            defer graph.deinit();
+        }
+    }.check, .{});
+}
