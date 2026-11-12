@@ -56,12 +56,18 @@ pub fn LazySegtree(
         pub fn init(allocator: Allocator, n: usize) !Self {
             const size = try math.ceilPowerOfTwo(usize, n);
             const log = @ctz(size);
+
+            const d = try allocator.alloc(S, 2 * size);
+            errdefer allocator.free(d);
+            const lz = try allocator.alloc(F, size);
+            errdefer allocator.free(lz);
+
             const self = Self{
                 .n = n,
                 .size = size,
                 .log = log,
-                .d = try allocator.alloc(S, 2 * size),
-                .lz = try allocator.alloc(F, size),
+                .d = d,
+                .lz = lz,
                 .allocator = allocator,
             };
             @memset(self.d, e());
@@ -83,12 +89,18 @@ pub fn LazySegtree(
             const n = v.len;
             const size = try math.ceilPowerOfTwo(usize, n);
             const log = @ctz(size);
+
+            const d = try allocator.alloc(S, 2 * size);
+            errdefer allocator.free(d);
+            const lz = try allocator.alloc(F, size);
+            errdefer allocator.free(lz);
+
             var self = Self{
                 .n = n,
                 .size = size,
                 .log = log,
-                .d = try allocator.alloc(S, 2 * size),
-                .lz = try allocator.alloc(F, size),
+                .d = d,
+                .lz = lz,
                 .allocator = allocator,
             };
             @memset(self.d, e());
