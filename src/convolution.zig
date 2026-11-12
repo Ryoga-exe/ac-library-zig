@@ -188,8 +188,8 @@ fn prepareFFT(comptime mod: u32) struct {
     sum_ie: [30]Modint(mod),
 } {
     const Mint = Modint(mod);
-    var sum_e = [_]Mint{Mint.raw(0)} ** 30;
-    var sum_ie = [_]Mint{Mint.raw(0)} ** 30;
+    var sum_e: [30]Mint = @splat(Mint.raw(0));
+    var sum_ie: [30]Mint = @splat(Mint.raw(0));
 
     const g = Mint.raw(internal.comptimePrimitiveRoot(mod));
     const cnt2: usize = @intCast(@ctz(mod - 1));

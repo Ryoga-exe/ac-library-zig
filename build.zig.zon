@@ -1,7 +1,7 @@
 .{
     .name = .ac_library,
     .version = "0.6.0",
-    .minimum_zig_version = "0.16.0",
+    .minimum_zig_version = "0.17.1",
     .fingerprint = 0x8ab1cf135fb49dc,
     .paths = .{
         "src",
