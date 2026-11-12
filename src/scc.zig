@@ -115,3 +115,13 @@ test "SccGraph: ALPC-G sample" {
     try std.testing.expectEqualSlices(usize, &[_]usize{2}, scc_graph.get(2));
     try std.testing.expectEqualSlices(usize, &[_]usize{ 0, 3 }, scc_graph.get(3));
 }
+
+test "SccGraph: handles zero vertices" {
+    const allocator = std.testing.allocator;
+    var graph = try SccGraph.init(allocator, 0);
+    defer graph.deinit();
+
+    var groups = try graph.scc();
+    defer groups.deinit();
+    try std.testing.expectEqual(0, groups.len);
+}

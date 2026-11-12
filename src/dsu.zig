@@ -174,7 +174,7 @@ test Dsu {
     try std.testing.expectEqualSlices(usize, &[_]usize{3}, g.get(1));
 }
 
-test "Dsu.groups handles zero vertices" {
+test "Dsu: handles zero vertices" {
     const allocator = std.testing.allocator;
     var d = try Dsu.init(allocator, 0);
     defer d.deinit();

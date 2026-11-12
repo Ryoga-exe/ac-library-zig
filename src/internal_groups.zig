@@ -42,14 +42,22 @@ allocator: Allocator,
 ///
 /// Returns an error if memory allocation fails.
 pub fn init(allocator: Allocator, group_num: usize, group_index: []const ?usize) !Groups {
+    const data = try allocator.alloc(usize, group_index.len);
+    errdefer allocator.free(data);
+    const group_size = try allocator.alloc(usize, group_num);
+    errdefer allocator.free(group_size);
+    const offset = try allocator.alloc(usize, group_num);
+    errdefer allocator.free(offset);
+
     var self = Groups{
         .len = group_num,
-        .data = try allocator.alloc(usize, group_index.len),
-        .group_size = try allocator.alloc(usize, group_num),
-        .offset = try allocator.alloc(usize, group_num),
+        .data = data,
+        .group_size = group_size,
+        .offset = offset,
         .allocator = allocator,
     };
     @memset(self.group_size, 0);
+    if (group_num == 0) return self;
     for (group_index) |index| {
         self.group_size[index.?] += 1;
     }
@@ -62,8 +70,7 @@ pub fn init(allocator: Allocator, group_num: usize, group_index: []const ?usize)
     @memset(index, 0);
     for (0..group_index.len) |i| {
         const group = group_index[i].?;
-        const offset = self.offset[group];
-        self.data[offset + index[group]] = i;
+        self.data[self.offset[group] + index[group]] = i;
         index[group] += 1;
     }
     return self;
