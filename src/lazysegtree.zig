@@ -538,6 +538,22 @@ test "LazySegtree: ALPC-L sample" {
     }
 }
 
+test "LazySegtree: releases memory on allocation failure" {
+    try std.testing.checkAllAllocationFailures(std.testing.allocator, struct {
+        fn check(allocator: Allocator) !void {
+            var segtree = try LazySegtreeFromNS(tests.max_add).init(allocator, 3);
+            defer segtree.deinit();
+        }
+    }.check, .{});
+
+    try std.testing.checkAllAllocationFailures(std.testing.allocator, struct {
+        fn check(allocator: Allocator) !void {
+            var segtree = try LazySegtreeFromNS(tests.max_add).initFromSlice(allocator, &.{ 3, 1, 4 });
+            defer segtree.deinit();
+        }
+    }.check, .{});
+}
+
 const tests = struct {
     const max_add = struct {
         const S = i32;
