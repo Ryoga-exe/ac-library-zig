@@ -467,6 +467,20 @@ test McfGraph {
     const flow, const cost = try graph.flowWithCapacity(0, 3, 2);
     try expectEqual(2, flow);
     try expectEqual(6, cost);
+
+    // cloneEdges returns an independent snapshot
+    var graph2 = McfGraphI32.init(allocator, 2);
+    defer graph2.deinit();
+
+    _ = try graph2.addEdge(0, 1, 3, 2);
+    _ = try graph2.flowWithCapacity(0, 1, 1);
+    const edges = try graph2.cloneEdges();
+    defer allocator.free(edges);
+    try expectEqualSlices(McfGraphI32.Edge, &.{
+        .{ .from = 0, .to = 1, .cap = 3, .flow = 1, .cost = 2 },
+    }, edges);
+    edges[0].cap = 0;
+    try expectEqual(3, graph2.getEdge(0).cap);
 }
 
 test "same_cost_paths" {
