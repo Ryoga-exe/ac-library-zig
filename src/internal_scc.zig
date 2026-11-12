@@ -112,3 +112,15 @@ fn dfs(allocator: Allocator, v: usize, n: usize, env: *Env) !void {
         env.group_num += 1;
     }
 }
+
+test SccGraph {
+    try std.testing.checkAllAllocationFailures(std.testing.allocator, struct {
+        fn check(allocator: Allocator) !void {
+            var graph = SccGraph.init(allocator, 2);
+            defer graph.deinit();
+            try graph.addEdge(0, 1);
+            const ids = (try graph.sccIds()).@"1";
+            defer allocator.free(ids);
+        }
+    }.check, .{});
+}
