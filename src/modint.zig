@@ -284,12 +284,13 @@ pub fn DynamicModint(id: comptime_int) type {
 
         /// `self - v (mod mod())`.
         pub inline fn sub(self: Self, v: anytype) Self {
-            const x = self.val -% switch (@TypeOf(v)) {
+            const x = switch (@TypeOf(v)) {
                 inline Self => v.val,
                 inline else => takeMod(v),
             };
+            const y = self.val -% x;
             return Self{
-                .val = if (x >= mod()) x - mod() else x,
+                .val = if (self.val < x) y +% mod() else y,
             };
         }
 
