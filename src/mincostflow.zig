@@ -133,8 +133,8 @@ pub fn McfGraph(comptime Cap: type, comptime Cost: type) type {
 
         /// Returns cloned of the current internal state of the edges.
         /// The edges are ordered in the same order as added by `addEdge`.
-        pub fn cloneEdges(self: Self) Allocator.Error![]Edges {
-            return self.g.clone();
+        pub fn cloneEdges(self: Self, allocator: Allocator) Allocator.Error![]Edge {
+            return allocator.dupe(Edge, self.edges.items);
         }
 
         /// Computes the minimum-cost flow from `s` to `t`.
@@ -316,6 +316,7 @@ pub fn McfGraph(comptime Cap: type, comptime Cost: type) type {
                 var cost_current: Cost = 0;
                 var prev_cost_per_flow: Cost = -1;
                 var result: ArrayList(CapCostPair) = .empty;
+                errdefer result.deinit(self.allocator);
                 try result.append(self.allocator, CapCostPair{ 0, 0 });
                 while (flow_current < flow_limit) {
                     if (!try self.refineDual(s, t, g, dual_dist, vis, prev_e)) {
@@ -467,6 +468,20 @@ test McfGraph {
     const flow, const cost = try graph.flowWithCapacity(0, 3, 2);
     try expectEqual(2, flow);
     try expectEqual(6, cost);
+
+    // cloneEdges returns an independent snapshot
+    var graph2 = McfGraphI32.init(allocator, 2);
+    defer graph2.deinit();
+
+    _ = try graph2.addEdge(0, 1, 3, 2);
+    _ = try graph2.flowWithCapacity(0, 1, 1);
+    const edges = try graph2.cloneEdges(allocator);
+    defer allocator.free(edges);
+    try expectEqualSlices(McfGraphI32.Edge, &.{
+        .{ .from = 0, .to = 1, .cap = 3, .flow = 1, .cost = 2 },
+    }, edges);
+    edges[0].cap = 0;
+    try expectEqual(3, graph2.getEdge(0).cap);
 }
 
 test "same_cost_paths" {
@@ -499,4 +514,17 @@ test "only_one_nonzero_cost_edge" {
     const slope = try graph.slope(0, 2);
     defer allocator.free(slope);
     try expectEqualSlices(struct { i32, i32 }, &.{ .{ 0, 0 }, .{ 1, 1 } }, slope);
+}
+
+test "McfGraph: memory tests" {
+    try testing.checkAllAllocationFailures(testing.allocator, struct {
+        fn check(allocator: Allocator) !void {
+            var graph = McfGraph(i32, i32).init(allocator, 2);
+            defer graph.deinit();
+            _ = try graph.addEdge(0, 1, 1, 1);
+            const slope = try graph.slope(0, 1);
+            defer allocator.free(slope);
+            try expectEqualSlices(struct { i32, i32 }, &.{ .{ 0, 0 }, .{ 1, 1 } }, slope);
+        }
+    }.check, .{});
 }

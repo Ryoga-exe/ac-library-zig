@@ -132,3 +132,12 @@ test "FenwickTree works" {
     try std.testing.expectEqual(@as(i64, 12), bit.sum(1, 4));
     try std.testing.expectEqual(@as(i64, 6), bit.sum(2, 3));
 }
+
+test "FenwickTree: bitXor" {
+    const allocator = std.testing.allocator;
+    var bit = try FenwickTree(u32, operation(u32).bitXor, 0).init(allocator, 3);
+    defer bit.deinit();
+    bit.add(0, 1);
+    bit.add(2, 1);
+    try std.testing.expectEqual(0, bit.sum(0, 3));
+}

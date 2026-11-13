@@ -186,7 +186,7 @@ pub fn MfGraph(comptime Cap: type) type {
             const m = pos.len;
             assert(i < m);
             assert(0 <= new_flow and new_flow <= new_cap);
-            var e = self.g[pos[i].@"0"].items[self.pos[i].@"1"].*;
+            var e = &self.g[pos[i].@"0"].items[self.pos.items[i].@"1"];
             e.cap = new_cap - new_flow;
             self.g[e.to].items[e.rev].cap = new_flow;
         }
@@ -259,6 +259,11 @@ pub fn MfGraph(comptime Cap: type) type {
             assert(s != t);
             assert(0 <= flow_limit);
 
+            const level = try self.allocator.alloc(i32, n);
+            defer self.allocator.free(level);
+            const iter = try self.allocator.alloc(usize, n);
+            defer self.allocator.free(iter);
+
             var flowCalc = struct {
                 const Calc = @This();
 
@@ -319,15 +324,11 @@ pub fn MfGraph(comptime Cap: type) type {
                 .s = s,
                 .t = t,
                 .flow_limit = flow_limit,
-                .level = try self.allocator.alloc(i32, n),
-                .iter = try self.allocator.alloc(usize, n),
+                .level = level,
+                .iter = iter,
                 .que = .init(self.allocator),
             };
-            defer {
-                self.allocator.free(flowCalc.level);
-                self.allocator.free(flowCalc.iter);
-                flowCalc.que.deinit();
-            }
+            defer flowCalc.que.deinit();
 
             var result: Cap = 0;
             while (result < flow_limit) {
@@ -360,6 +361,7 @@ pub fn MfGraph(comptime Cap: type) type {
         /// - $O(n + m)$, where $m$ is the number of added edges.
         pub fn minCut(self: Self, s: usize) Allocator.Error![]bool {
             var visited = try self.allocator.alloc(bool, self.n);
+            errdefer self.allocator.free(visited);
             @memset(visited, false);
 
             var que = try internal.SimpleQueue(usize).initCapacity(self.allocator, self.n);
@@ -495,4 +497,41 @@ test "test_dont_repeat_same_phase" {
         _ = try graph.addEdge(1, 2, 1);
     }
     try expectEqual(n, try graph.flow(0, 2));
+}
+
+test "MfGraph.changeEdge updates capacity and flow" {
+    const allocator = testing.allocator;
+    var graph = try MfGraph(i32).init(allocator, 2);
+    defer graph.deinit();
+
+    const edge = try graph.addEdge(0, 1, 3);
+    graph.changeEdge(edge, 5, 1);
+    try expectEqual(5, graph.getEdge(edge).cap);
+    try expectEqual(1, graph.getEdge(edge).flow);
+    try expectEqual(4, try graph.flow(0, 1));
+    try expectEqual(5, graph.getEdge(edge).flow);
+}
+
+test "MfGraph: memoty tests" {
+    // flow
+    try testing.checkAllAllocationFailures(testing.allocator, struct {
+        fn check(allocator: Allocator) !void {
+            var graph = try MfGraph(i32).init(allocator, 2);
+            defer graph.deinit();
+            _ = try graph.addEdge(0, 1, 1);
+            try expectEqual(1, try graph.flow(0, 1));
+        }
+    }.check, .{});
+
+    // minCut
+    try testing.checkAllAllocationFailures(testing.allocator, struct {
+        fn check(allocator: Allocator) !void {
+            var graph = try MfGraph(i32).init(allocator, 2);
+            defer graph.deinit();
+            _ = try graph.addEdge(0, 1, 1);
+            const cut = try graph.minCut(0);
+            defer allocator.free(cut);
+            try expectEqualSlices(bool, &.{ true, true }, cut);
+        }
+    }.check, .{});
 }

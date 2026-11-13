@@ -173,3 +173,13 @@ test Dsu {
     try std.testing.expectEqualSlices(usize, &[_]usize{ 0, 1, 2 }, g.get(0));
     try std.testing.expectEqualSlices(usize, &[_]usize{3}, g.get(1));
 }
+
+test "Dsu: handles zero vertices" {
+    const allocator = std.testing.allocator;
+    var d = try Dsu.init(allocator, 0);
+    defer d.deinit();
+
+    var g = try d.groups();
+    defer g.deinit();
+    try std.testing.expectEqual(0, g.len);
+}

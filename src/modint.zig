@@ -149,16 +149,23 @@ pub fn StaticModint(comptime m: comptime_int) type {
         pub inline fn pow(self: Self, n: anytype) Self {
             @setEvalBranchQuota(100000);
             assert(0 <= n);
-            var x = self;
-            var r = Self.init(1);
-            var _n: std.math.IntFittingRange(0, n) = n;
-            while (_n > 0) : (_n >>= 1) {
-                if (_n & 1 == 1) {
-                    r = r.mul(x);
+
+            const Exponent = if (@TypeOf(n) == comptime_int)
+                std.math.IntFittingRange(0, @max(2, n))
+            else
+                @Int(.unsigned, @max(2, @typeInfo(@TypeOf(n)).int.bits));
+
+            var exponent: Exponent = @intCast(n);
+            var base = self;
+            var result = Self.init(1);
+
+            while (exponent > 0) : (exponent >>= 1) {
+                if (exponent & 1 == 1) {
+                    result = result.mul(base);
                 }
-                x = x.mul(x);
+                base = base.mul(base);
             }
-            return r;
+            return result;
         }
 
         /// Retruns the multiplicative inverse of `self`.
@@ -277,12 +284,13 @@ pub fn DynamicModint(id: comptime_int) type {
 
         /// `self - v (mod mod())`.
         pub inline fn sub(self: Self, v: anytype) Self {
-            const x = self.val -% switch (@TypeOf(v)) {
+            const x = switch (@TypeOf(v)) {
                 inline Self => v.val,
                 inline else => takeMod(v),
             };
+            const y = self.val -% x;
             return Self{
-                .val = if (x >= mod()) x - mod() else x,
+                .val = if (self.val < x) y +% mod() else y,
             };
         }
 
@@ -337,17 +345,25 @@ pub fn DynamicModint(id: comptime_int) type {
 
         /// Returns `self` to the power of `n`.
         pub inline fn pow(self: Self, n: anytype) Self {
+            @setEvalBranchQuota(100000);
             assert(0 <= n);
-            var x = self;
-            var r = Self.init(1);
-            var _n: std.math.IntFittingRange(0, n) = n;
-            while (_n > 0) : (_n >>= 1) {
-                if (_n & 1 == 1) {
-                    r = r.mul(x);
+
+            const Exponent = if (@TypeOf(n) == comptime_int)
+                std.math.IntFittingRange(0, @max(2, n))
+            else
+                @Int(.unsigned, @max(2, @typeInfo(@TypeOf(n)).int.bits));
+
+            var exponent: Exponent = @intCast(n);
+            var base = self;
+            var result = Self.init(1);
+
+            while (exponent > 0) : (exponent >>= 1) {
+                if (exponent & 1 == 1) {
+                    result = result.mul(base);
                 }
-                x = x.mul(x);
+                base = base.mul(base);
             }
-            return r;
+            return result;
         }
 
         /// Retruns the multiplicative inverse of `self`.
@@ -377,6 +393,7 @@ pub const Modint = DynamicModint(-1);
 
 const testing = std.testing;
 const expectEqual = testing.expectEqual;
+
 test StaticModint {
     const init = Modint1000000007.init;
     const sum = Modint1000000007.sum;
@@ -434,6 +451,14 @@ test StaticModint {
     c.subAsg(b);
     c.divAsg(b);
     try expectEqual(expected, c.val);
+
+    // pow
+    for ([_]u32{ 0, 1, 3 }, [_]u32{ 1, 2, 8 }) |n, expected_pow| {
+        try expectEqual(expected_pow, init(2).pow(n).as(u32));
+    }
+    for ([_]u1{ 0, 1 }, [_]u32{ 1, 2 }) |n, expected_pow| {
+        try expectEqual(expected_pow, init(2).pow(n).as(u32));
+    }
 }
 
 test DynamicModint {
@@ -446,6 +471,10 @@ test DynamicModint {
 
     // sum
     try expectEqual(init(-3).val, sum(i32, &[_]i32{ -1, 2, -3, 4, -5 }).val);
+
+    // sub
+    try expectEqual(1006, init(0).sub(1).val);
+    try expectEqual(1006, init(1).sub(init(2)).val);
 
     // product
     try expectEqual(init(-120).val, product(i32, &[_]i32{ -1, 2, -3, 4, -5 }).val);
@@ -468,10 +497,26 @@ test DynamicModint {
     c.divAsg(b);
     try expectEqual(expected, c.val);
 
+    var value = init(0);
+    value.subAsg(1);
+    try expectEqual(1006, value.val);
+
+    // negate
+    try expectEqual(0, init(0).negate().val);
+    try expectEqual(1006, init(1).negate().val);
+
     // mod = 1 (corner case)
     const Mint1 = DynamicModint(1);
     Mint1.setMod(1);
 
     const x = Mint1.init(123).pow(0);
     try expectEqual(0, x.val);
+
+    // pow
+    for ([_]u32{ 0, 1, 3 }, [_]u32{ 1, 2, 8 }) |n, expected_pow| {
+        try expectEqual(expected_pow, init(2).pow(n).as(u32));
+    }
+    for ([_]u1{ 0, 1 }, [_]u32{ 1, 2 }) |n, expected_pow| {
+        try expectEqual(expected_pow, init(2).pow(n).as(u32));
+    }
 }

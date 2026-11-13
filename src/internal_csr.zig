@@ -11,11 +11,16 @@ pub fn Csr(comptime E: type) type {
         allocator: Allocator,
 
         pub fn init(allocator: Allocator, n: usize, edges: []struct { usize, E }, initialValue: E) !Self {
+            const start = try allocator.alloc(usize, n + 1);
+            errdefer allocator.free(start);
+            const elist = try allocator.alloc(E, edges.len);
+            errdefer allocator.free(elist);
             const self = Self{
-                .start = try allocator.alloc(usize, n + 1),
-                .elist = try allocator.alloc(E, edges.len),
+                .start = start,
+                .elist = elist,
                 .allocator = allocator,
             };
+
             @memset(self.start, 0);
             @memset(self.elist, initialValue);
             for (edges) |e| {
@@ -38,4 +43,14 @@ pub fn Csr(comptime E: type) type {
             self.allocator.free(self.elist);
         }
     };
+}
+
+test Csr {
+    try std.testing.checkAllAllocationFailures(std.testing.allocator, struct {
+        fn check(allocator: Allocator) !void {
+            var edges = [_]struct { usize, usize }{ .{ 0, 1 }, .{ 1, 0 } };
+            var graph = try Csr(usize).init(allocator, 2, &edges, 0);
+            defer graph.deinit();
+        }
+    }.check, .{});
 }

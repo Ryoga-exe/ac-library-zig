@@ -381,21 +381,36 @@ pub fn suffixArrayArbitrary(comptime T: type, allocator: Allocator, s: []const T
     for (0..n) |i| {
         idx[i] = i;
     }
-    std.mem.sort(usize, &idx, {}, struct {
-        fn cmp(l: usize, r: usize) bool {
-            s[l] < s[r];
+    std.mem.sort(usize, idx, s, struct {
+        fn cmp(context: []const T, l: usize, r: usize) bool {
+            return context[l] < context[r];
         }
     }.cmp);
     var s2 = try allocator.alloc(usize, n);
     defer allocator.free(s2);
-    var now = 0;
+    var now: usize = 0;
     for (0..n) |i| {
         if (i > 0 and s[idx[i - 1]] != s[idx[i]]) {
             now += 1;
         }
         s2[idx[i]] = now;
     }
-    return saIsI32(.default, allocator, s2, now);
+    return saIs(.default, allocator, s2, now);
+}
+
+test suffixArrayArbitrary {
+    const allocator = std.testing.allocator;
+    const cases = [_]struct { s: []const i64, expected: []const usize }{
+        .{ .s = &.{}, .expected = &.{} },
+        .{ .s = &.{ 3, 1, 2 }, .expected = &.{ 1, 2, 0 } },
+        .{ .s = &.{ 9_000_000_000, -9_000_000_000, 9_000_000_000 }, .expected = &.{ 1, 2, 0 } },
+        .{ .s = &.{ 7, 7, 7 }, .expected = &.{ 2, 1, 0 } },
+    };
+    for (cases) |case| {
+        const sa = try suffixArrayArbitrary(i64, allocator, case.s);
+        defer allocator.free(sa);
+        try std.testing.expectEqualSlices(usize, case.expected, sa);
+    }
 }
 
 /// Given a string `s` of length `n`, it returns the suffix array of `s`.
