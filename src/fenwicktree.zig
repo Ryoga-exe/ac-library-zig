@@ -5,9 +5,9 @@ const assert = std.debug.assert;
 /// Fenwick Tree (Binary‑Indexed Tree)
 /// Reference: https://en.wikipedia.org/wiki/Fenwick_tree
 ///
-/// This is a wrapper around a tree of element type T, update operation op, and identity e.
+/// This is a wrapper around a tree of element type T.
 /// Initialize with `init`.
-pub fn FenwickTree(comptime T: type, comptime op: fn (T, T) T, comptime e: T) type {
+pub fn FenwickTree(comptime T: type) type {
     return struct {
         const Self = @This();
         /// logical length of the array
@@ -32,7 +32,7 @@ pub fn FenwickTree(comptime T: type, comptime op: fn (T, T) T, comptime e: T) ty
                 .data = try allocator.alloc(T, n),
                 .allocator = allocator,
             };
-            @memset(self.data, e);
+            @memset(self.data, 0);
             return self;
         }
 
@@ -58,7 +58,7 @@ pub fn FenwickTree(comptime T: type, comptime op: fn (T, T) T, comptime e: T) ty
             assert(idx < self.n);
             var p = idx + 1;
             while (p <= self.n) {
-                self.data[p - 1] = op(self.data[p - 1], val);
+                self.data[p - 1] +%= val;
                 p += p & (~p +% 1);
             }
         }
@@ -78,15 +78,15 @@ pub fn FenwickTree(comptime T: type, comptime op: fn (T, T) T, comptime e: T) ty
         /// - $O(\log n)$
         pub fn sum(self: *Self, l: usize, r: usize) T {
             assert(l <= r and r <= self.n);
-            return self.accum(r) - self.accum(l);
+            return self.accum(r) -% self.accum(l);
         }
 
         /// Internal helper, prefix sum of `[0, idx)`.
         fn accum(self: *Self, idx: usize) T {
             var r = idx;
-            var s = @as(T, e);
+            var s: T = 0;
             while (r > 0) {
-                s += self.data[r - 1];
+                s +%= self.data[r - 1];
                 r &= r - 1;
             }
             return s;
@@ -94,29 +94,9 @@ pub fn FenwickTree(comptime T: type, comptime op: fn (T, T) T, comptime e: T) ty
     };
 }
 
-/// Convenient helper for i64 FenwickTree.
-pub const FenwickTreeI64 = FenwickTree(i64, operation(i64).addition, 0);
-
-/// Convenient helper for i32 FenwickTree.
-pub const FenwickTreeI32 = FenwickTree(i32, operation(i32).addition, 0);
-
-fn operation(comptime T: type) type {
-    return struct {
-        pub fn addition(x: T, y: T) T {
-            return x + y;
-        }
-        pub fn bitAnd(x: T, y: T) T {
-            return x & y;
-        }
-        pub fn bitXor(x: T, y: T) T {
-            return x ^ y;
-        }
-    };
-}
-
 test "FenwickTree works" {
     const allocator = std.testing.allocator;
-    var bit = try FenwickTreeI64.init(allocator, 5);
+    var bit = try FenwickTree(i64).init(allocator, 5);
     defer bit.deinit();
     // [1, 2, 3, 4, 5]
     for (0..5) |i| {
@@ -131,13 +111,4 @@ test "FenwickTree works" {
     try std.testing.expectEqual(@as(i64, 18), bit.sum(0, 5));
     try std.testing.expectEqual(@as(i64, 12), bit.sum(1, 4));
     try std.testing.expectEqual(@as(i64, 6), bit.sum(2, 3));
-}
-
-test "FenwickTree: bitXor" {
-    const allocator = std.testing.allocator;
-    var bit = try FenwickTree(u32, operation(u32).bitXor, 0).init(allocator, 3);
-    defer bit.deinit();
-    bit.add(0, 1);
-    bit.add(2, 1);
-    try std.testing.expectEqual(0, bit.sum(0, 3));
 }
