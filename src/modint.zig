@@ -175,6 +175,7 @@ pub fn StaticModint(comptime m: comptime_int) type {
         /// Panics if the multiplicative inverse does not exist.
         pub inline fn inv(self: Self) Self {
             if (comptime prime) {
+                assert(self.val != 0);
                 return self.pow(m - 2);
             } else {
                 const g, const x = internal.invGcd(self.val, m);
