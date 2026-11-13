@@ -41,7 +41,7 @@ pub fn FenwickTree(comptime T: type) type {
             self.allocator.free(self.data);
         }
 
-        /// Processes `a[idx] += x` (`a[idx] = op(a[idx], x)`).
+        /// Processes `a[idx] += x`.
         ///
         /// # Constraints
         ///
@@ -63,7 +63,7 @@ pub fn FenwickTree(comptime T: type) type {
             }
         }
 
-        /// Returns `a[l] + a[l + 1] + ... + a[r - 1]` (`op(a[l], op(a[l + 1], op(..., a[r - 1])))`).
+        /// Returns `a[l] + a[l + 1] + ... + a[r - 1]`.
         ///
         /// # Constraints
         ///
